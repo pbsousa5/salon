@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateBarberSamplesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('barber_samples', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('barber_id')->index();// 门店id
+            $table->string('opus_img', 32);// 作品照片
+            $table->string('describe', 255);// 对作品的描述
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('barber_samples');
+    }
+}

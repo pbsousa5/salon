@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateSystemLogsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('system_logs', function(Blueprint $table) {
+            $table->increments('id');
+            $table->integer('user_id')->index();// 操作用户id
+            $table->integer('type');//操作用户身份类型
+            $table->string('url', 64);// 操作的url
+            $table->string('content', 64);//操作内容
+            $table->string('operator_ip', 15);//操作者ip
+            $table->timestamp('deleted_at');//时间戳时间
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('system_logs');
+    }
+}

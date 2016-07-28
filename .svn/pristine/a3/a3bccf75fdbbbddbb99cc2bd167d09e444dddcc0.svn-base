@@ -1,0 +1,16 @@
+<?php $__env->startSection('h_title'); ?>
+    <title><?php echo e($title); ?></title>
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startSection('content'); ?>
+	<div>
+	
+	    <div class="custom-title text-left">
+	        <h2 class="title"><?php echo e($title); ?></h2>
+	        <p class="sub_title">发布日期:<?php echo e($created_at); ?></p>
+	    </div>
+	</div>
+    <!-- 富文本内容 -->
+   <div class="custom-richtext"><?php echo $banner_info; ?></div>
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('apps.master', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>

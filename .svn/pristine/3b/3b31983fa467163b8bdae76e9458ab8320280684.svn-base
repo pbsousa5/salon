@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateBarberCachesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('barber_caches', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('barber_id')->index();// 门店id
+            $table->text('reviews');// 评论相关的集合，序列化
+            $table->text('count')->default(serialize(['fund'=>0,'review'=>0,'order'=>0,'consumer'=>0]));// 关注者数量
+            $table->tinyInteger('avg_score')->default(0);// 评论的综合得分
+            $table->integer('lower_price')->default(0);// 门店的最低价格,单位为分
+            $table->smallInteger('followers')->default(0);// 关注者数量
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('barber_caches');
+    }
+}

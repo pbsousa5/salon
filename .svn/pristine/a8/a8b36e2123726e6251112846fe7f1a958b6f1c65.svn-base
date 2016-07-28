@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 资金记录
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateFundRecordsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('fund_records', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('draw_fee')->default(0);// 从平台提现提走的总金额，单位为分
+            $table->integer('balance_fee')->default(0);// 平台剩余资金，单位为分(可提走的金额)
+            $table->integer('user_id')->index();// 用户的id
+            $table->enum('user_type', ['supplier','consumer','barber']);// 身份标识，1：门店
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('fund_records');
+    }
+}

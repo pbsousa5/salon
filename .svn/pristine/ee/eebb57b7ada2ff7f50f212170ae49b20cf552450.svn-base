@@ -1,0 +1,95 @@
+.content-body {
+	position: relative;
+	z-index: 10;
+}
+.custom-richtext {
+	padding: 0 10px;
+	padding-top: 10px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	font-size: 16px;
+	color: #333;
+	line-height: 1.5;
+	overflow: hidden;
+	text-align: left;
+	word-wrap: break-word;
+}
+.custom-richtext img+br {
+	display: block;
+	padding: 4px 0;
+	content: ' ';
+}
+.custom-richtext p {
+	margin: 0 0 1em 0;
+}
+.custom-richtext a {
+	color: #07d;
+}
+.custom-title {
+	background: url("/coach_app/Public/assets/img/app/bottom_line.png") left top no-repeat;
+	background-size: 100% 1px;
+	background-position: left bottom;
+	padding: 0 10px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	margin-bottom: 10px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	overflow: hidden;
+	word-break: break-all;
+}
+.custom-title .title {
+	margin: 0;
+	font-size: 18px;
+	line-height: 22px;
+}
+.custom-title .sub_title {
+	color: #8c8c8c;
+	font-size: 11px;
+	margin: 5px 0 0;
+}
+
+@media (min-width: 360px) {
+.content {
+	width: 100%;
+	margin: 0 auto;
+}}
+@media (min-width: 540px) {
+.content {
+	width: 540px;
+	margin: 0 auto;
+}}
+@media (min-width: 760px) {
+.content {
+	width: 750px;
+	margin: 30px auto 0;
+}
+.content-body {
+	background-color: #fff;
+	width: 540px;
+	padding: 10px;
+	border: 1px solid #ddd;
+}
+.footer {
+    width: 760px;
+    margin: 20px auto 0;
+}
+.footer .copyright {
+    width: 574px;
+    margin: 0;
+}}
+@media (min-width: 800px) {
+.content {
+	width: 760px;
+	margin: 30px auto 20px;
+}
+.content-body {
+	background-color: #fff;
+	-webkit-box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+	box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+.footer .copyright {
+    width: 562px;
+}}

@@ -1,0 +1,39 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 用户关注商家表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateConsumerWatchsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('consumer_watchs', function(Blueprint $table){
+            $table->integer('consumer_id')->index();// 用户id
+            $table->integer('user_id')->index();// 商家id/理发师id
+            $table->enum('user_type', ['supplier', 'barber']);
+            $table->timestamp('created_at');// 关注的时间
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('consumer_watchs');
+    }
+}

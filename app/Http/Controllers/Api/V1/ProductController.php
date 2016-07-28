@@ -1,0 +1,622 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Api\ApiBaseController;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\ProductService;
+use Illuminate\Http\Request;
+use Validator;
+use App\Libary\Contracts\Http\ResponseInterface;
+use App\Salon\Services\SupplierService;
+use Illuminate\Support\Str;
+use Cache;
+use App\Salon\Services\LoginService;
+use App\Salon\Repositories\ProductCategoryRepository;
+
+/**
+ * 
+ * 
+ * @desc 获取产品相关信息接口
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月4日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Product",
+ *  description="产品相关信息API",
+ *  produces="['application/json']"
+ * )
+ */
+class ProductController extends ApiBaseController
+{
+    /**
+     * 产品的服务层
+     * @var ProductService
+     */
+    protected $productSer;
+    
+    /**
+     * 门店服务层
+     * @var SupplierService
+     */
+    protected $supplierSer;
+    
+    /**
+     * The LoginService instance.
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            ProductService $productSer,
+            SupplierService $supplierSer,
+            LoginService $loginSer
+    ){
+        parent::__construct($aes);
+        $this->productSer = $productSer;
+        $this->supplierSer = $supplierSer;
+        $this->loginSer = $loginSer;
+        //$this->middleware('req', ['except'=>['intro']]);
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/products/list_caegory",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取所有分类信息",
+     *      notes="无",
+     *      type="ProductCategory",
+     *      nickname="list_category",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取分类信息成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到任何分类信息"),
+     *      @SWG\ResponseMessage(code=500, message="服务器发生异常")
+     *  )
+     * )
+     */
+    public function categorys(ProductCategoryRepository $category)
+    {
+        $list = $category->index();
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '访问的数据不存在'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取分类数据成功',
+                $list->toArray()
+        ));
+    }
+    
+    public function index(Request $request, $user_id)
+    {
+        // 获取参数，并验证
+        $inputs['user_id'] = $user_id;
+        $inputs['user_type'] = $request->input('user_type');
+        $validator = Validator::make($inputs, [
+                'user_id' => 'required|integer',
+                'user_type' => 'required|in:supplier,barber',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $list = $this->productSer->listProductByUserId($user_id, $inputs['user_type'], '', 0);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '查找的数据不存在'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $list
+        ));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/products/sign/{product_id}",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取某一个商品的详细信息,返回一个model",
+     *      notes="该接口，可能会在订单中用于直接查看某个产品信息,或者刷新单个产品信息",
+     *      type="Product",
+     *      nickname="info_sign",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_type",
+     *          description="用户类型，supplier:门店 barber:理发师",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="supplier",
+     *          enum="['supplier','barber']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="product_id",
+     *          description="指定资源的id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到你想要获取的数据"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证失败")
+     *  )
+     * )
+     */
+    public function show(Request $request, $product_id)
+    {
+        $inputs['product_id'] = $product_id;
+        $inputs['user_type'] = $request->input('user_type');
+        // 获取参数，并验证
+        $validator = Validator::make($inputs, [
+                'product_id' => 'required|integer',
+                'user_type' => 'required|in:supplier,barber',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 获取整个model内容
+        $model = $this->productSer->getModelById($product_id, $inputs['user_type'], '');
+        if (is_null($model)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '访问的数据不存在'
+            ));
+        }
+
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $model
+        ));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/products/{product_id}/intro",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取指定资源id的富文本介绍信息",
+     *      notes="返回的是一个H5页面",
+     *      type="void",
+     *      nickname="intro",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="product_id",
+     *          description="产品资源id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_type",
+     *          description="获取的产品对象，supplier barber",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="barber",
+     *          enum="['barber','supplier']"
+     *      ),
+     *  )
+     * )
+     */
+    public function intro(Request $request, $product_id)
+    {
+        $user_type = $request->input('user_type');
+        
+        $intro = $this->productSer->getModelById($product_id, $user_type, ['rich_desc', 'product_name']);
+        
+        return view('apps.product', $intro);
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/products/{supplier_id}/add",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="添加产品",
+     *      notes="产品详情页只能在web端进行添加",
+     *      type="Product",
+     *      nickname="p_add",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="要添加的资源产品拥有者门店的id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="添加的数据,aes加密(此处直接加密json字符串),token作为秘钥",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          defaultValue="wEYKu5tBLC3iixJ34fWUVjUywIwVUqJxDclNIb1lXOU2uWm0Pyvc/prHCNWJpvyg9orJG94+PKDXpbG5pZJRbBJlk0bFrEFYg0gohkQVkw3MZJ0srbGrTsTGZmhHJsrUjhsrSkbuBHQGikIu/KIGLaQp3FdRzUGaWL9QBExquw0CRPolYr4RvQcIJ4xlQ0Jmt9AkQflFdR0/VBIciRNOXOtKcIyxDtB1nSGtkSbg7K1OXTe79ifVOiA47L0f6JF1"
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="添加成功"),
+     *      @SWG\ResponseMessage(code=422, message="数据验证未通过"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function store($supplier_id)
+    {
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                'APP版暂不支持添加项目'
+        ));
+        // 检查是否登陆
+        $this->isLogin($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        
+        $inputs = json_decode($this->decodeAppData(bodys('json', 'data'), $cacheValue['token']), true);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'product_name' => 'string',
+                'product_desc' => 'string',
+                'original_price' => 'integer',
+                'sell_price' => 'integer',
+                'category_id' => 'integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $inputs['supplier_id'] = $supplier_id;
+        $model = $this->productSer->addProduct($inputs);
+        if (empty($model)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务器错误'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_CREATED,
+                '添加成功',
+                $model
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/products/{supplier_id}/delete/{product_id}",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="删除产品",
+     *      notes="删除后将不可恢复",
+     *      type="void",
+     *      nickname="p_edit",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="要删除的资源产品拥有者门店的id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="product_id",
+     *          description="要删除的资源产品id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="删除成功"),
+     *      @SWG\ResponseMessage(code=422, message="数据验证未通过"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function destory($supplier_id, $product_id)
+    {
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                'APP版暂不支持删除项目'
+        ));
+        // 检查是否登陆
+        $this->isLogin($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        
+        // 检查删除的产品是否是该门店所有
+        $product = $this->productSer->getProduct($product_id);
+        if ($product->supplier_id != $supplier_id) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证未通过'
+            ));
+        }
+        
+        $flag = $product->delete();
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NO_CONTENT,
+                    '删除成功'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                '服务器异常，不确定操作是否成功'
+        ));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/products/{supplier_id}/edit/{product_id}",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="修改产品基本信息",
+     *      notes="产品详情页只能在web端进行修改",
+     *      type="Product",
+     *      nickname="p_edit",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="要修改的资源所属门店id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="product_id",
+     *          description="要修改的资源产品id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="修改的数据,aes加密,token作为秘钥",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          defaultValue="wEYKu5tBLC3iixJ34fWUVjUywIwVUqJxDclNIb1lXOU2uWm0Pyvc/prHCNWJpvyg9orJG94+PKDXpbG5pZJRbBJlk0bFrEFYg0gohkQVkw3MZJ0srbGrTsTGZmhHJsrUjhsrSkbuBHQGikIu/KIGLaQp3FdRzUGaWL9QBExquw0CRPolYr4RvQcIJ4xlQ0Jmt9AkQflFdR0/VBIciRNOXOtKcIyxDtB1nSGtkSbg7K1OXTe79ifVOiA47L0f6JF1"
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="修改成功"),
+     *      @SWG\ResponseMessage(code=422, message="数据验证未通过"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function update($supplier_id, $product_id)
+    {
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                'APP版暂不支持删除项目'
+        ));
+        // 检查是否登陆
+        $this->isLogin($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        
+        $inputs = json_decode($this->decodeAppData(bodys('json', 'data'), $cacheValue['token']), true);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'product_name' => 'string',
+                'product_desc' => 'string',
+                'original_price' => 'integer',
+                'sell_price' => 'integer',
+                'category_id' => 'integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 修改产品
+        $product = $this->productSer->updateProduct($product_id, $supplier_id, $inputs);
+        if ($product->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '添加产品与门店身份不符'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_CREATED,
+                '创建成功',
+                $product
+        ));
+    }
+}

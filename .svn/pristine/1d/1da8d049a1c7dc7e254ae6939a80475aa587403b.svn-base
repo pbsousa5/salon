@@ -1,0 +1,259 @@
+<?php
+namespace App\Salon\Services\V2;
+
+use App\Salon\Services\BarberService as BarberSer;
+use App\Salon\Repositories\V2\BarberProductRepository;
+use App\Salon\Repositories\V2\BarberRepository;
+use App\Salon\Repositories\V2\BarberCacheRepository;
+use App\Salon\Repositories\V2\ProductRepository;
+use App\Salon\Repositories\V2\ConsumeLogRepository;
+use App\Libary\Util\Geohash;
+use App\Libary\Location\NearbySeller;
+use App\Libary\Util\Location;
+use App\Salon\Repositories\V2\BarberSampleRepository;
+
+/**
+ *
+ *
+ * @desc 理发师服务层
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年11月10日
+ */
+class BarberService extends BarberSer
+{
+    /**
+     * The BarberProductRepository instance.
+     * @var BarberProductRepository
+     */
+    protected $barberProductRe;
+    
+    /**
+     * The BarberRepository instance.
+     * @var BarberRepository
+     */
+    protected $barberRe;
+    
+    /**
+     * The BarberCacheRepository instance.
+     * @var BarberCacheRepository
+     */
+    protected $barberCacheRe;
+    
+    /**
+     * The FollowService instance.
+     * @var FollowService
+     */
+    protected $followSer;
+    
+    /**
+     * The ProductRepository instance.
+     * @var ProductRepository
+     */
+    protected $productRe;
+    
+    /**
+     * The ConsumeLogRepository instance.
+     * @var ConsumeLogRepository
+     */
+    protected $consumeLogRe;
+    
+    /**
+     * geohash算法对象
+     * @var Geohash
+     */
+    protected $geoHash;
+    
+    /**
+     * The NotifyService instance.
+     * @var NotifyService
+     */
+    protected $notifySer;
+    
+    /**
+     * 理发师作品数据仓库
+     * @var BarberSampleRepository
+     */
+    protected $barberSampleRe;
+    
+    public function __construct(
+            BarberProductRepository $barberProductRe,
+            BarberRepository $barberRe,
+            Geohash $geoHash,
+            FollowService $followSer,
+            BarberCacheRepository $barberCacheRe,
+            ProductRepository $productRe,
+            ConsumeLogRepository $consumeLogRe,
+            NotifyService $notifySer,
+            BarberSampleRepository $barberSampleRe
+    ){
+        parent::__construct(
+                $barberProductRe,
+                $barberRe,
+                $geoHash,
+                $followSer,
+                $barberCacheRe,
+                $productRe,
+                $consumeLogRe,
+                $notifySer,
+                $barberSampleRe
+        );
+    }
+    
+    /**
+     * 获取理发师列表数据，理发师只有列表模式，无地图模式
+     *
+     * @param array $inputs 获取列表数据的条件
+     * @param integer $page 当前请求第几页,默认1
+     * @param integer $per_page 本次请求多少条数据,默认20
+     * 
+     * @return Illuminate\Support\Collection
+     */
+    public function listBarber($inputs = [], $page = 1, $per_page = 20)
+    {
+        $extra['consumer_id'] = array_get($inputs, 'consumer_id', 0);
+        $addressArr = [];
+        $flag = false; //标记是否需要排序
+        
+        $sortby = $inputs['sortby'];
+        
+        if ('distance' == $sortby) {
+            $near = new NearbySeller('barber', $inputs['longitude'], $inputs['latitude']);
+            $addressArr = $near->getFromNearToFar($per_page, $page);
+        
+            // 从数组中取出所有的门店id
+            $ids = array_key_value($addressArr, '_id');
+            $inputs = array_add($inputs, 'ids', $ids);
+            $flag = true;
+            
+            $inputs = array_remove_keys($inputs, ['sortby']);
+        } elseif (array_key_exists('longitude', $inputs) && array_key_exists('latitude', $inputs)) {
+            if (! empty($inputs['longitude']) && !empty($inputs['latitude'])) {
+                $extra['longitude'] = $inputs['longitude'];
+                $extra['latitude'] = $inputs['latitude'];
+            }
+        }
+        
+        // 移除多余数据
+        $inputs = array_remove_keys(
+                $inputs,
+                ['longitude', 'latitude', 'type', 'kilometer', 'page', 'per_page', 'consumer_id']
+        );
+        
+        $list = $this->barberRe->index($inputs, '', $per_page)->getCollection();
+        // 处理数据
+        foreach ($list as $key => $barber) {
+            $this->handleData($barber, $addressArr, $extra);
+        
+            // 排序需要的字段
+            $sortByDistance[$key] = $barber->pitch;
+        }
+        
+        $data = $list->toArray();
+        if ($flag) {
+            array_multisort($sortByDistance, SORT_ASC, $data);
+        }
+        
+        return collect($data);
+    }
+    
+    /**
+     * 处理数据
+     *
+     * @param mixed $data 需要处理的数据
+     * @param array $addrArr 门第的地址列表
+     * @param array $extra 其他额外的数据
+     * @return mixed
+     */
+    public function handleData($barber, $addrArr, $extra=[])
+    {
+        // 如果用户id存在，则需要检查用户是否关注该门店
+        if (!empty($extra) && array_key_exists('consumer_id', $extra)) {
+            $where = ['consumer_id'=>$extra['consumer_id'], 'user_id'=>$barber->id];
+            $barber->watcher = $this->followSer->checkStatus($where, 'barber') ? 1 : 0;
+        } else {
+            $barber->watcher = 0;
+        }
+        
+        $reviews = unserialize($barber->reviews);
+        $barber->tags = $reviews['tags'] ? $reviews['tags'] : null;
+        unset($reviews['tags']);
+        $barber->reviews = $reviews;
+        $barber->count = unserialize($barber->count);
+        $barber->age = age($barber->birthday);
+        $barber->work_life = age($barber->work_life);
+        $barber->status = (int) $barber->status;
+        
+        if ($barber->gender == 1) {
+            $barber->gender = '男';
+        } elseif ($barber->barber_gender == 0) {
+            $barber->gender = '女';
+        } else {
+            $barber->barber_gender = '未设置';
+        }
+        
+        // 获取门店信息
+        if (! is_null($barber->supplier)) {
+            $barber->supplier->business_time = unserialize($barber->supplier->business_time);
+            $barber->supplier->phones = unserialize($barber->supplier->phones);
+            $barber->supplier->gallerys = unserialize($barber->supplier->gallerys) ? unserialize($barber->supplier->gallerys) : [];
+            unset($barber->supplier->legal_name);
+            unset($barber->supplier->id_num);
+            unset($barber->supplier->id_photos);
+            unset($barber->supplier->license_photo);
+        }
+        // 获取两个产品信息
+        $barber->barberProduct = $barber->barberProduct()->where('is_delete', 0)->where('status', 1)->orderBy('sell_price', 'asc')->take(2)->get();
+        if (is_null($barber->barberProduct)) {
+            $barber->barberProduct = [];
+        } else {
+            foreach ($barber->barberProduct as $key => $product) {
+                $max_price = max($product->sell_price, $product->sign_price);#比价平台售价与签约价，取较大值让用户进行支付
+        
+                $barber->barberProduct[$key]->sell_price = $max_price;
+        
+                $barber->barberProduct[$key]->desc_url = config('appinit.apiurl')."products/{$product->id}/intro?type=barber";
+                unset($barber->barberProduct[$key]->rich_desc);
+            }
+        }
+        
+        // 获取位置信息，距离是m
+        if (empty($addrArr)) {
+            $barber->pitch = 0;
+            
+            if (array_key_exists('longitude', $extra) && array_key_exists('latitude', $extra)) {
+                $srcLongLat = implode(',', [$extra['longitude'], $extra['latitude']]);
+                $destLongLat = implode(',', [$barber->longitude, $barber->latitude]);
+                $barber->pitch = Location::getP2PDistance($srcLongLat, $destLongLat);
+            }
+        } else {
+            foreach ($addrArr as $addr) {
+                if ($addr['_id'] == $barber->id) {
+                    $barber->pitch = $addr['dis'];
+                    break;
+                }
+            }
+        }
+        
+        // 获取是否有未读消息
+        $barber->new_notify = $this->notifySer->getUserNotifyNotRead($barber->id, 'barber') ? 1 : 0;
+    }
+    
+    /**
+     * 重载方法，此时上传的图片为多张图片，用逗号进行的分隔
+     *
+     * @param array $inputs 需要保存的数据
+     *
+     * @return boolean
+     */
+    public function addSample($inputs)
+    {
+        $inputs['opus_img'] = explode(',', $inputs['opus_img']);
+        
+        $sample = $this->barberSampleRe->store($inputs);
+        if ($sample === false) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+}

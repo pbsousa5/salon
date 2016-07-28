@@ -1,0 +1,51 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 保存用户数据的表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateConsumersTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('consumers', function(Blueprint $table) {
+            $table->increments('id');
+            $table->string('account', 32)->unique();// 账户，原则上与mobile相同，若是第三方则不同
+            $table->char('mobile', 11)->unique();// 手机号码
+            $table->string('password', 60);// 密码
+            $table->string('nickname', 20)->nullable();// 昵称
+            $table->string('head_img', 32)->nullable();// 头像
+            $table->enum('gender', [-1, 0, 1])->default(-1);// 性别，1：男，0：女 -1未设置
+            $table->tinyInteger('age_tag')->default(0);// 年龄标签0：其他，1：60后，2：70后，3：80后，4：90后，5：00后
+            $table->integer('level_score')->default(0);// 用户等级积分
+            $table->smallInteger('my_bean')->default(0);// 美发币数量
+            $table->smallInteger('my_coupon')->default(0);// 优惠券张数
+            $table->smallInteger('weight')->default(0);// 用户权重值
+            $table->string('invitation_code', 6);// 用户专属要求码
+            $table->integer('comment_time')->default(1);// 用户评论的次数
+            $table->integer('helpful_count')->default(0);//用户被赞的次数
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('consumers');
+    }
+}

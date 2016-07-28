@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 产品分类表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateProductCategorysTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('product_categorys', function(Blueprint $table){
+            $table->increments('id');
+            $table->string('name', 12);// 分类名称
+            $table->string('describe', 255)->nullable();// 对该分类描述
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('product_categorys');
+    }
+}

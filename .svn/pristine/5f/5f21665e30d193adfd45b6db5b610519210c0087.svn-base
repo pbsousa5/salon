@@ -1,0 +1,39 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 设备
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateDevicesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('devices', function(Blueprint $table){
+            $table->increments('id');
+            $table->string('name', 10);// 设备名称
+            $table->string('key', 32);// 设备对应的key
+            $table->enum('status', [0, 1])->default(1);// 设备的状态，0：不支持，1：支持
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('devices');
+    }
+}

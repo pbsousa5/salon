@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 创建支付类型
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreatePaymentTypesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('payment_types', function(Blueprint $table){
+            $table->string('pay_code', 12)->primary();// 支付方式的编码
+            $table->string('pay_name', 20);// 支付方式的名称
+            $table->string('pay_desc', 255);// 对支付方式的描述
+            $table->tinyInteger('is_enable')->default(1);// 是否启用该支付,0:不支持，1：支持
+            $table->text('pay_configs')->nullable();// 支付的配置信息
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('payment_types');
+    }
+}

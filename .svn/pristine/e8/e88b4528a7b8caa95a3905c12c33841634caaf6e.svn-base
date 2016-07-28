@@ -1,0 +1,44 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 门店收入资金
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月11日
+ */
+class CreateIncomeCashLogsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('income_cash_logs', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('supplier_id')->index();// 收入的主体，
+            $table->integer('consumer_id')->index();// 是哪一个用户支付的或者申请的退款操作
+            $table->integer('barber_id')->default(0)->index();// 如果有理发师参与则需要设置理发师的id，如果为0表示没有理发师参与
+            $table->integer('order_info_id')->index();// 对应的订单主键
+            $table->string('trade_no', 32)->index();// 对应的订单编号
+            $table->integer('cash_fee');// 总金额，单位为分
+            $table->enum('status', [1, 2])->default(1);// 该笔收入状态：1：未提现(用户已消费)，2：提走的(门店已经提走金额)
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('income_cash_logs');
+    }
+}

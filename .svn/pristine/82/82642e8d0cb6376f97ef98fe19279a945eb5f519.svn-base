@@ -1,0 +1,53 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 产品表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateProductsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('products', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('supplier_id')->index();// 门店的id
+            $table->integer('category_id')->index();// 分类的id
+            $table->string('product_name', 32);// 产品名称
+            $table->string('product_desc', 255);// 产品的简介
+            $table->integer('sell_price');// 出售的价格，如果未设置，则用原价*折扣进行计算，单位为分
+            $table->integer('sign_price');// 该产品应该向门店支付的价格
+            $table->integer('original_price');// 原价，单位为分
+            $table->smallInteger('const_stock')->default(0);// 自动更新时执行的库存
+            $table->smallInteger('total_stock')->default(0);// 库存,0表示库存无限多,-1表示没有库存了
+            $table->tinyInteger('quota_num')->default(0);// 每人限购.0表示没有限制
+            $table->tinyInteger('status')->default(1);// 产品状态 0：售罄, 1：在售，2：下架
+            $table->tinyInteger('sold_type')->default(0);// 销售的类型，0：立刻销售，1：定时销售
+            $table->integer('start_sold_time')->default(0);// 如果sold_type=1,则设定此值
+            $table->text('rich_desc');// 富文本介绍内容
+            $table->tinyInteger('is_real')->default(1);// 是否是真实商品,0:不是(优惠券等)，1：是
+            $table->tinyInteger('is_delete')->default(0);// 是否被删除，逻辑上 0:未删除，1：删除
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('products');
+    }
+}

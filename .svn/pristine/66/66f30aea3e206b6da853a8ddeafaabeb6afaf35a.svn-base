@@ -1,0 +1,54 @@
+<?php
+namespace App\Http\Controllers\Api\V2;
+
+use App\Http\Controllers\Api\V1\FollowerController as FollowerCon;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\V2\FollowService;
+use App\Salon\Services\V2\ConsumerService;
+use App\Salon\Services\V2\SupplierService;
+use App\Salon\Services\V2\LoginService;
+use App\Salon\Services\V2\BarberService;
+
+class FollowerController extends FollowerCon
+{
+    /**
+     * 关注相关服务
+     * @var FollowService
+     */
+    protected $followerSer;
+    
+    /**
+     * 消费者服务
+     * @var ConsumerService
+     */
+    protected $consumerSer;
+    
+    /**
+     * 门店服务层
+     * @var SupplierService
+     */
+    protected $supplierSer;
+    
+    /**
+     * The LoginService instance.
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    /**
+     * The BarberService instance.
+     * @var BarberService
+     */
+    protected $barberSer;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            FollowService $followerSer,
+            ConsumerService $consumerSer,
+            SupplierService $supplierSer,
+            LoginService $loginSer,
+            BarberService $barberSer
+    ) {
+        parent::__construct($aes, $followerSer, $consumerSer, $supplierSer, $loginSer, $barberSer);
+    }
+}

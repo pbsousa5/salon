@@ -1,0 +1,39 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 订单与活动表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateOrderActionsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('order_actions', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('order_product_id')->index();// 订单中的某一个产品
+            $table->string('action_name', 20);// 互动的名称，对应一张表名称
+            $table->text('configs');// 配置信息
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('order_actions');
+    }
+}

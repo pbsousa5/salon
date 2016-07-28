@@ -1,0 +1,179 @@
+html,body,div,span,applet,object,iframe,
+h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,
+acronym,address,big,cite,code,del,dfn,em,img,
+ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,
+var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,
+label,legend,table,caption,tbody,tfoot,thead,tr,th,
+td,article,aside,canvas,details,embed,figure,figcaption,
+footer,header,hgroup,menu,nav,output,ruby,section,
+summary,time,mark,audio,video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font: inherit;
+	font-size: 100%;
+	vertical-align: baseline;
+}
+html {
+	line-height: 1;
+}
+ol,ul {
+	list-style: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+caption,th,td {
+	font-weight: normal;
+	vertical-align: middle;
+}
+q,blockquote {
+	quotes: none;
+}
+q: before,q: after,blockquote: before,blockquote: after {
+	content: "";
+	content: none;
+}
+a img {
+	border: none;
+}
+article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary {
+	display: block;
+}
+html {
+	-ms-text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+	font-family: Helvetica,"STHeiti STXihei","Microsoft JhengHei","Microsoft YaHei",Tohoma,Arial;
+}
+body {
+	color: #333;
+	background-color: #eee;
+	-webkit-backface-visibility: hidden;
+}
+body.body-fixed-bottom {
+	padding-bottom: 40px;
+}
+.container {
+	background-color: #f8f8f8;
+}
+strong {
+	font-weight: bold;
+}
+a {
+	color: #333;
+	background: transparent;
+	text-decoration: none;
+}
+h1 {
+	font-size: 2em;
+	margin: 0.67em 0;
+}
+h2 {
+	font-size: 18px;
+	line-height: 22px;
+}
+h3 {
+	font-size: 15px;
+	line-height: 18px;
+}
+img {
+    background: none;
+    max-width: 100% !important;
+    min-height: 1px;
+    width: auto !important;
+    height: auto !important;
+    vertical-align: middle;
+}
+button,input[type='number'],input[type='text'],input[type='password'],input[type='email'],select,textarea {
+	font-family: inherit;
+	font-size: 100%;
+	margin: 0;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+}
+hr {
+	margin: 10px 0;
+	border: 0px none;
+	-webkit-border-image: url("/v2/image/wap/border-line.png") 2 stretch;
+	-moz-border-image: url("/v2/image/wap/border-line.png") 2 stretch;
+	border-image: url("/v2/image/wap/border-line.png") 2 stretch;
+	border-top: 2px solid #e5e5e5;
+}
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5),
+only screen and (min--moz-device-pixel-ratio: 1.5),
+only screen and (-o-min-device-pixel-ratio: 3/2),
+only screen and (min-device-pixel-ratio: 1.5) {
+	hr {
+	border-top-width: 1px;
+}}
+.center,.text-center {
+	text-align: center;
+}
+.text-left {
+	text-align: left;
+}
+.text-right {
+	text-align: right;
+}
+.content {
+	margin: 0 auto;
+}
+.container .content {
+	zoom: 1;
+}
+.container .content: after {
+	content: "";
+	display: table;
+	clear: both;
+}
+.copyright {
+	background-color: #f8f8f8;
+	color: #999;
+	font-size: 12px;
+	line-height: 16px;
+	text-align: center;
+}
+.copyright .ft-links {
+	padding: 15px;
+	text-align: center;
+}
+.copyright .ft-links>a {
+	margin: 0 6px;
+	color: #333;
+}
+.copyright .ft-links ~ .ft-copyright {
+	-webkit-border-image: url("/coach_app/Public/assets/img/app/border-line.png") 2 stretch;
+	-moz-border-image: url("/coach_app/Public/assets/img/app/border-line.png") 2 stretch;
+	border-image: url("/coach_app/Public/assets/img/app/border-line.png") 2 stretch;
+	border-top: 2px solid #e5e5e5;
+}
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5),
+only screen and (min--moz-device-pixel-ratio: 1.5),
+only screen and (-o-min-device-pixel-ratio: 3/2),
+only screen and (min-device-pixel-ratio: 1.5) {
+	.copyright .ft-links ~ .ft-copyright {
+	border-top-width: 1px;
+}}
+.copyright .ft-copyright {
+	padding: 50px 0 20px;
+	margin: 0 15px;
+	text-align: center;
+	font-size: 12px;
+	background: url("/coach_app/Public/assets/img/app/logo@2x.png") no-repeat center 20px;
+	background-size: 73px 24px;
+}
+.copyright .ft-copyright>a {
+	padding-top: 45px;
+	color: #ccc;
+}
+.copyright .ft-copyright: first-child {
+	margin-top: 0px;
+}
+.footer {
+	margin: 0;
+	padding: 0;
+	text-align: center;
+	line-height: 16px;
+	background-color: #f8f8f8;
+}

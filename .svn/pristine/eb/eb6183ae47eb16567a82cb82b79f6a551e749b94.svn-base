@@ -1,0 +1,42 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc android升级使用
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateVersionAppsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('version_apps', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('device_id');// 设备号，这里只有android有意义
+            $table->string('version_code', 10);// 版本号，如v1.0.1
+            $table->smallInteger('version_id');// 版本标识，用于判断是否应该升级
+            $table->string('upgrade_point', 512);// 升级提示信息
+            $table->string('package_url', 100);// 升级的url
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('version_apps');
+    }
+}

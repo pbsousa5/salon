@@ -1,0 +1,44 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 通知的标签
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateNotifysTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('notifys', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('user_id')->index();// 用户主键
+            $table->enum('user_type', ['consumer', 'supplier', 'barber'])->default('consumer');// 用户类型，consumer:用户  supplier：门店 barber:理发师
+            //$table->string('user_type', 20);
+            $table->string('title', 20);// 消息的title
+            $table->string('push_msg', 512);// 推送的消息内容
+            $table->tinyInteger('is_read')->default(0);// 是否已读，0：未读 1：已读
+            $table->tinyInteger('notify_type');// 消息的类型0：通知，1:提现，2：订单
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('notifys');
+    }
+}

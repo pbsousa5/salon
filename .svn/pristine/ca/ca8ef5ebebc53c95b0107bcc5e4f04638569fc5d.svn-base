@@ -1,0 +1,141 @@
+<?php
+
+namespace App\Salon\Repositories\V2;
+
+use App\Salon\BarberProduct;
+use App\Salon\Repositories\BarberProductRepository as BarberProductRep;
+/**
+ *
+ *
+ *
+ * @desc 理发师产品数据仓库
+ * @author fengdq <fengdq@bnersoft.com>
+ * @date 2015年11月12日
+ */
+class BarberProductRepository extends BarberProductRep
+{
+    /**
+     *
+     * 创建一个理发师产品数据仓库实例
+     * @param App\Salon\BarberProduct $barberproduct
+     * @return void
+     */
+    public function __construct(BarberProduct $barberProduct)
+    {
+        $this->model = $barberProduct;
+    }
+
+    /**
+     * 更新或创建理发师产品
+     * 
+     * @param BarberProduct $barberProduct 理发师产品model
+     * @param array $inputs 更新的数据
+     * @return BarberProduct|null
+     */
+    protected function saveBarberProduct(BarberProduct $barberProduct, array $inputs)
+    {
+        if (array_key_exists('supplier_id', $inputs)) {
+            $barberProduct->supplier_id = $inputs['supplier_id'];
+        }
+        if (array_key_exists('product_id', $inputs)) {
+            $barberProduct->product_id = $inputs['product_id'];
+        }
+        if (array_key_exists('barber_id', $inputs)) {
+            $barberProduct->barber_id = $inputs['barber_id'];
+        }
+        if (array_key_exists('category_id', $inputs)) {
+            $barberProduct->category_id = $inputs['category_id'];
+        }
+        if (array_key_exists('product_name', $inputs)) {
+            $barberProduct->product_name = e(trim($inputs['product_name']));
+        }
+        if (array_key_exists('product_desc', $inputs)) {
+            $barberProduct->product_desc = e(trim($inputs['product_desc']));
+        }
+        if (array_key_exists('sell_price', $inputs)) {
+            $barberProduct->sell_price = $inputs['sell_price'];
+        }
+        if (array_key_exists('sign_price', $inputs)) {
+            $barberProduct->sign_price = $inputs['sign_price'];
+        }
+        if (array_key_exists('original_price', $inputs)) {
+            $barberProduct->original_price = $inputs['original_price'];
+        }
+        if (array_key_exists('total_stock', $inputs)) {
+            $barberProduct->total_stock = $inputs['total_stock'];
+        }
+        if (array_key_exists('const_stock', $inputs)) {
+            $barberProduct->const_stock = $inputs['const_stock'];
+        }
+        if (array_key_exists('quota_num', $inputs)) {
+            $barberProduct->quota_num = $inputs['quota_num'];
+        }
+        if (array_key_exists('status', $inputs)) {
+            $barberProduct->status = $inputs['status'];
+        }
+        if (array_key_exists('sold_type', $inputs)) {
+            $barberProduct->sold_type = $inputs['sold_type'];
+        }
+        if (array_key_exists('start_sold_time', $inputs)) {
+            $barberProduct->start_sold_time = $inputs['start_sold_time'];
+        }
+        if (array_key_exists('rich_desc', $inputs)) {
+            $barberProduct->rich_desc = $inputs['rich_desc'];
+        }
+        if (array_key_exists('is_real', $inputs)) {
+            $barberProduct->is_real = $inputs['is_real'];
+        }
+        if (array_key_exists('is_delete', $inputs)) {
+            $barberProduct->is_delete = $inputs['is_delete'];
+        }
+        if (array_key_exists('created_at', $inputs)) {
+            $barberProduct->created_at = $inputs['created_at'];
+        }
+        if (array_key_exists('updated_at', $inputs)) {
+            $barberProduct->updated_at = $inputs['updated_at'];
+        }
+        
+        if ($barberProduct->save()) {
+            return $barberProduct;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * IRepository接口destory方法
+     * 请在子类中重写或重载具体的实现方法
+     *
+     * @param  int $ids
+     * @param  string|array $extra
+     * @return boolean
+     */
+    public function destroy($ids = [], $extra)
+    {
+        $len = count($ids);
+        if ($len == 0 && empty($extra)) {
+            return ;
+        }
+        
+        $query = $this->createModel()->newQuery();
+        if ($len == 1) {
+            $query->where('id', $ids[0]);
+        } elseif ($len > 1) {
+            $query->whereIn('id', $ids);
+        }
+        
+        if (array_key_exists('barber_id', $extra)) {
+            $query->where('barber_id', $extra['barber_id']);
+        }
+        
+        if (array_key_exists('product_id', $extra)) {
+            if (1 == count($extra['product_id'])) {
+                $query->where('product_id', $extra['product_id'][0]);
+            } else {
+                $query->whereIn('product_id', $extra['product_id']);
+            }
+        }
+        
+        return $query->delete();
+    }
+}

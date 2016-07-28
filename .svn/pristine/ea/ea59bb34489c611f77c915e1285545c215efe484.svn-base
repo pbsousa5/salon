@@ -1,0 +1,659 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/App",
+    "apis": [
+        {
+            "path": "/app/about_us",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u5173\u4e8e\u6211\u4eec\u9875\u9762",
+                    "nickname": "about_us",
+                    "type": "void",
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u8bbf\u95ee\u7684\u9875\u9762\u4e0d\u5b58\u5728"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/add_feedback",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u53cd\u9988\u610f\u89c1\u7684\u9875\u9762",
+                    "nickname": "show_feedback",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "mobile",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u624b\u673a\u53f7\u7801",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u63d0\u4ea4\u610f\u89c1\u7684\u7528\u6237\u8eab\u4efd",
+                            "enum": [
+                                "supplier",
+                                "consumer",
+                                "barber",
+                                "other"
+                            ],
+                            "defaultValue": "other"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u9875\u9762\u6210\u529f"
+                        }
+                    ],
+                    "notes": "\u8bf7\u4e0a\u4f20\u7528\u6237\u7684mobile\uff0c\u5982\u679c\u7528\u6237\u767b\u5f55",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                },
+                {
+                    "method": "POST",
+                    "summary": "\u63d0\u4ea4\u53cd\u9988\u610f\u89c1",
+                    "nickname": "add_feedback",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "form",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u7528\u6237\u7c7b\u578b",
+                            "enum": [
+                                "consumer",
+                                "supplier",
+                                "barber",
+                                "other"
+                            ],
+                            "defaultValue": "consumer"
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "mobile",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u624b\u673a\u53f7\u7801"
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "feedback_txt",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u53cd\u9988\u610f\u89c1"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u521b\u5efa\u6210\u529f"
+                        },
+                        {
+                            "code": 415,
+                            "message": "\u53ef\u80fd\u6c42\u60c5\u7684\u6570\u636e\u9519\u8bef"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u53d1\u751f\u4e86\u6545\u969c"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/banner",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6app\u7684\u6a2a\u5e45\u5e7f\u544a",
+                    "nickname": "banner",
+                    "type": "Banner",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u5e7b\u706f\u7247\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u6682\u65e0\u5e7b\u706f\u7247"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u53d1\u751f\u5f02\u5e38"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/banner/{id}",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6307\u5b9aid\u6a2a\u5e45\u5e7f\u544a\u7684\u5185\u5bb9",
+                    "nickname": "banner_info",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "path",
+                            "name": "id",
+                            "type": "integer",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u56fe\u7247\u7684id"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/init_info",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u5e94\u7528\u521d\u59cb\u5316\u914d\u7f6e\u4fe1\u606f",
+                    "nickname": "init_info",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "header",
+                            "name": "Device-Type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u8bbe\u5907\u7c7b\u578b",
+                            "enum": [
+                                "Android4.0",
+                                "Ios7.0"
+                            ]
+                        },
+                        {
+                            "paramType": "header",
+                            "name": "App-Type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u5e94\u7528\u7c7b\u578b\uff0c\u7528\u6237\u7aef\u4e0e\u95e8\u5e97\u7aef\uff0c\u5982\u679c\u662f\u95e8\u5e97\u7aef\uff0c\u5c06\u6ca1\u6709banners\u5b57\u6bb5",
+                            "enum": [
+                                "app-consumer",
+                                "app-supplier"
+                            ]
+                        },
+                        {
+                            "paramType": "header",
+                            "name": "Version-Code",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u5e94\u7528\u7684\u5f53\u524d\u7248\u672c\uff0c\u5373\uff1aversion_id\u5b57\u6bb5\u7684\u503c\uff0c\u5982\u679c\u8bbe\u5907\u7c7b\u578b\u4e3aandroid\uff0c\u5219\u8be5\u5b57\u6bb5\u5fc5\u987b"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u521d\u59cb\u6570\u636e\u6210\u529f"
+                        },
+                        {
+                            "code": 415,
+                            "message": "\u53ef\u80fd\u8bf7\u6c42\u7684\u8bbe\u5907\u7c7b\u578b\u4e0d\u6b63\u786e"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u53d1\u751f\u4e86\u6545\u969c"
+                        }
+                    ],
+                    "notes": "\u8bf7\u5728\u8bf7\u6c42\u5934\u4e2d\u586b\u5199\u81ea\u5df1\u5e94\u7528\u7c7b\u578b",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/join_apply",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u95e8\u5e97\u7533\u8bf7\u52a0\u5165\uff0c\u6216\u8005\u7406\u53d1\u5e08",
+                    "nickname": "join_apply",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "body",
+                            "name": "m_body",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u5c06\u624b\u673a\uff0c\u540d\u79f0\uff0c\u7533\u8bf7\u4eba\u7ec4\u7ec7\u5c42json\u6570\u636e\uff0c\u5411\u670d\u52a1\u5668\u4f20\u8f93"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u521b\u5efa\u6210\u529f"
+                        },
+                        {
+                            "code": 415,
+                            "message": "\u53ef\u80fd\u6c42\u60c5\u7684\u6570\u636e\u9519\u8bef"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u53d1\u751f\u4e86\u6545\u969c"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/qiniu_callback",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u7531\u4e03\u725b\u8d1f\u8d23\u56de\u8c03\uff0c\u5ba2\u6237\u7aef\u5728\u4e0a\u4f20\u65f6\uff0c\u987b\u544a\u77e5\u4e03\u725b\u8be5url",
+                    "nickname": "call_back",
+                    "type": "void",
+                    "responseMessages": [
+                        {
+                            "code": 400,
+                            "message": "Invalid ID supplied"
+                        },
+                        {
+                            "code": 404,
+                            "message": "Pet not found"
+                        },
+                        {
+                            "code": 405,
+                            "message": "Validation exception"
+                        }
+                    ],
+                    "notes": "\u53ea\u80fd\u5728\u516c\u7f51\u4e2d\u8fdb\u884c\u8bbf\u95ee",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/qiniu_token/{type}",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u4e03\u725b\u7684token",
+                    "nickname": "qiniu_token",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "type",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u9ed8\u8ba4\u8fd4\u56deuploadToken,\u5982\u679c\u662f\u624b\u673a\u7aef\u8bf7\u6c42\uff0c\u7c7b\u578b\u8bf7\u9009\u62e9\uff1ajs_upload",
+                            "enum": [
+                                "upload",
+                                "js_upload",
+                                "download",
+                                "access"
+                            ],
+                            "defaultValue": "upload"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "filename",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u4e0a\u4f20\u6587\u4ef6\u7684\u540d\u79f0,\u4e0d\u4f20\u6587\u4ef6\u540d\uff0c\u7528\u4e8e\u5e94\u5bf9\u4e0a\u4f20\u591a\u957f\u56fe\u7247",
+                            "defaultValue": "haha.jpg"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6210\u529f"
+                        },
+                        {
+                            "code": 415,
+                            "message": "\u4e0d\u652f\u6301\u751f\u6210\u8be5\u7c7b\u578btoken"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u5f02\u5e38"
+                        }
+                    ],
+                    "notes": "\u76ee\u524d\u4ec5\u652f\u6301\u4e0a\u4f20\u7c7b\u578btoken\u751f\u6210",
+                    "consumes": [
+                        "multipart/form-data"
+                    ]
+                }
+            ]
+        },
+        {
+            "path": "/app/upgrade",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u68c0\u67e5\u66f4\u65b0\uff0c\u5728\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u4f1a\u81ea\u52a8\u8fdb\u884c",
+                    "nickname": "app_upgrade",
+                    "type": "VersionApp",
+                    "parameters": [
+                        {
+                            "paramType": "header",
+                            "name": "Device-Type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u8bbe\u5907\u7c7b\u578b",
+                            "enum": [
+                                "Android4.0"
+                            ]
+                        },
+                        {
+                            "paramType": "header",
+                            "name": "App-Type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u5e94\u7528\u7c7b\u578b\uff0c\u7528\u6237\u7aef\u4e0e\u95e8\u5e97\u7aef\uff0c\u5982\u679c\u662f\u95e8\u5e97\u7aef\uff0c\u5c06\u6ca1\u6709banners\u5b57\u6bb5",
+                            "enum": [
+                                "app-consumer",
+                                "app-supplier"
+                            ]
+                        },
+                        {
+                            "paramType": "header",
+                            "name": "Version-Code",
+                            "type": "integer",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u5e94\u7528\u7684\u5f53\u524d\u7248\u672c\uff0c\u5373\uff1aversion_id\u5b57\u6bb5\u7684\u503c"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u5230\u6700\u65b0\u7248\u672c\u6210\u529f"
+                        },
+                        {
+                            "code": 201,
+                            "message": "\u5f53\u524d\u5df2\u662f\u6700\u65b0\u7248\u672c"
+                        },
+                        {
+                            "code": 415,
+                            "message": "\u53ef\u80fd\u8bf7\u6c42\u7684\u8bbe\u5907\u7c7b\u578b\u4e0d\u6b63\u786e"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u53d1\u751f\u4e86\u6545\u969c"
+                        }
+                    ],
+                    "notes": "\u8bf7\u5728\u8bf7\u6c42\u5934\u4e2d\u586b\u5199\u81ea\u5df1\u5e94\u7528\u7c7b\u578b\uff0c\u76ee\u524d\u4ec5\u652f\u6301android",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/{mobile}/sms",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u9a8c\u8bc1\u7801",
+                    "nickname": "sms",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "path",
+                            "name": "mobile",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "6\u4f4d\u7eaf\u6570\u5b57\u9a8c\u8bc1\u7801",
+                            "defaultValue": "15882049545"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6210\u529f"
+                        },
+                        {
+                            "code": 429,
+                            "message": "\u8be5\u7528\u6237\u4eca\u5929\u5df2\u4e0d\u53ef\u83b7\u53d6\u9a8c\u8bc1\u7801"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u53d1\u751f\u4e86\u6545\u969c"
+                        }
+                    ],
+                    "notes": "\u6bcf\u5929\u53ea\u80fd\u83b7\u53d610\u6b21",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/app/{user_id}/push_info",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u63d0\u4ea4\u7528\u6237\u63a8\u9001\u76f8\u5173\u7684\u4fe1\u606f",
+                    "nickname": "push_info",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u7528\u6237\u7c7b\u578b",
+                            "enum": [
+                                "consumer",
+                                "supplier",
+                                "barber"
+                            ],
+                            "defaultValue": "consumer"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "channel_id",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u4e0e\u4e00\u53f0\u8bbe\u5907\u552f\u4e00\u5bf9\u5e94\uff0c\u5fc5\u987b\u4e3a\u7aef\u4e0a\u521d\u59cb\u5316channel\u6210\u529f\u4e4b\u540e\u8fd4\u56de\u7684channel_id"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u66f4\u65b0\u6210\u529f"
+                        },
+                        {
+                            "code": 415,
+                            "message": "\u53ef\u80fd\u6c42\u60c5\u7684\u6570\u636e\u9519\u8bef"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u53d1\u751f\u4e86\u6545\u969c"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "models": {
+        "VersionApp": {
+            "id": "VersionApp",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "device_id": {
+                    "description": "\u8bbe\u5907id",
+                    "type": "integer"
+                },
+                "version_code": {
+                    "description": "\u7248\u672c\u7f16\u7801",
+                    "type": "string"
+                },
+                "version_id": {
+                    "description": "\u7248\u672c\u53f7\uff0c\u4ee5\u6b64\u6765\u8bc6\u522b\u65b0\u7248\u672c",
+                    "type": "integer"
+                },
+                "upgrade_point": {
+                    "description": "\u5347\u7ea7\u8bf4\u660e",
+                    "type": "string"
+                },
+                "package_url": {
+                    "description": "app\u5305\u5730\u5740",
+                    "type": "string"
+                }
+            }
+        },
+        "Banner": {
+            "id": "Banner",
+            "properties": {
+                "id": {
+                    "description": "\u5730\u5740\u7684\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "banner\u6807\u9898",
+                    "type": "string"
+                },
+                "img_url": {
+                    "description": "\u56fe\u7247\u5730\u5740",
+                    "type": "string"
+                },
+                "banner_info": {
+                    "description": "\u63cf\u8ff0",
+                    "type": "string"
+                },
+                "read_num": {
+                    "description": "\u9605\u8bfb\u6570",
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "produces": [
+        "application/json"
+    ]
+}

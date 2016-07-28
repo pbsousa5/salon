@@ -1,0 +1,58 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 订单中的产品表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateOrderProductsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('order_products', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('order_info_id')->index();// 属于的订单id
+            $table->integer('consumer_id')->index();// 购买该产品的用户id
+            $table->integer('product_id')->default(0)->index();// 对应的产品id
+            $table->integer('supplier_id')->index();// 属于的门店id
+            $table->integer('barber_product_id')->default(0)->index();// 理发师的产品id，如果product_id不为0，则该字段应该为0
+            $table->integer('barber_id')->default(0)->index();// 属于的理发师id
+            $table->string('category_name', 12);// 产品分类名称
+            $table->string('product_name', 32);// 产品名称
+            $table->string('product_desc', 255);// 产品的简介
+            $table->integer('original_price');// 该产品的原价,单位为分
+            $table->integer('pay_price');// 支付的价格,单位为分
+            $table->integer('sign_price');// 该产品应该向门店支付的价格
+            $table->smallInteger('good_number');// 购买的数量
+            $table->tinyInteger('is_action')->default(0);// 该产品是否属于活动，0：不属于，1：属于
+            $table->tinyInteger('is_real')->default(1);// 是否是真实商品，0：虚拟，1：真实
+            $table->tinyInteger('is_back')->default(1);// 是否准许退款，0：不可以，1:可以
+            $table->string('consume_code', 32);// 消费码，即用于扫码确认的编码
+            //'0':'尚未支付','1':'支付未使用','2':'支付已使用','3':'退款处理'
+            $table->enum('product_status', [0, 1, 2, 3])->default(0);
+            $table->decimal('multiple_supplier', 3, 1)->default(1.0);// 门店设置的倍数
+            $table->decimal('multiple_platform', 3, 1)->default(1.0);// 平台设置的倍数
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('order_products');
+    }
+}

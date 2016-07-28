@@ -1,0 +1,161 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/Pay",
+    "apis": [
+        {
+            "path": "/pays/{order_id}",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u5411\u5fae\u4fe1\u652f\u4ed8\u670d\u52a1\u5668\u8fdb\u884c\u4e0b\u5355\u64cd\u4f5c",
+                    "nickname": "wx_order",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "header",
+                            "name": "Device-Type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u8bbe\u5907\u7c7b\u578b(\u7248\u672c\u4fe1\u606f\u53ea\u80fd\u4e3a\uff1ax.x\u5f62\u5f0f)",
+                            "enum": [
+                                "Android4.0",
+                                "Ios7.0"
+                            ]
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "order_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u9700\u8981\u4e0b\u5355\u7684\u8ba2\u5355\u7f16\u53f7"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u751f\u6210\u8ba2\u5355\u6210\u529f"
+                        },
+                        {
+                            "code": 401,
+                            "message": "\u7528\u6237\u672a\u767b\u5f55"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u8bf7\u6c42\u6570\u636e\u9a8c\u8bc1\u672a\u901a\u8fc7"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/pays/{type}/notify",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u652f\u4ed8\u5b9d\u3001\u5fae\u4fe1\u3001\u81ea\u6d4b\u652f\u4ed8\u6210\u529f\u56de\u8c03\u63a5\u53e3",
+                    "nickname": "pay_back",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "path",
+                            "name": "type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u652f\u4ed8\u7684\u7c7b\u578b: wxpay alipay debugpay(\u6d4b\u8bd5\u4f7f\u7528)",
+                            "enum": [
+                                "debugpay"
+                            ],
+                            "defaultValue": "debugpay"
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "out_trade_no",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u7531\u5e73\u53f0\u751f\u6210\u7684\u8ba2\u5355\u53f7",
+                            "defaultValue": "BNS201508071326299801431"
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "trade_no",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u652f\u4ed8\u7684\u4ea4\u6613\u53f7\uff0c\u6a21\u62df\u652f\u4ed8\u5b9d\u3001\u5fae\u4fe1\u8d26\u53f7",
+                            "defaultValue": "123456"
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "total_fee",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u4ea4\u6613\u7684\u603b\u91d1\u989d(\u5355\u4f4d\u4e3a\u5206)",
+                            "defaultValue": "995"
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "gmt_payment",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u7528\u6237\u652f\u4ed8\u7684\u65f6\u95f4",
+                            "defaultValue": "2015-08-10 15:30:12"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "success"
+                        }
+                    ],
+                    "notes": "\u4ee5\u4e0b\u4e09\u4e2a\u53c2\u6570\uff0c\u662f\u6a21\u62df\u6d4b\u8bd5\u65f6\u9700\u8981\u4f20\u9001\u7684\u53c2\u6570",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "produces": [
+        "application/json"
+    ]
+}

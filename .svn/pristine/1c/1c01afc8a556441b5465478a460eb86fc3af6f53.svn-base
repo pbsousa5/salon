@@ -1,0 +1,638 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/Withdraw",
+    "apis": [
+        {
+            "path": "/withdraws/account_list",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6240\u6709\u8d26\u53f7\u4fe1\u606f",
+                    "nickname": "list_account",
+                    "type": "FundAccount",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "supplier_id",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u95e8\u5e97\u7684id\uff0caes(supplier_id=xxx, app_key)",
+                            "defaultValue": "u+YqIdUgApzljMTNsQP81A2OVxYfw+vM5JFgDwnTmYM="
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u627e\u5230\u4fe1\u606f"
+                        },
+                        {
+                            "code": 405,
+                            "message": "Validation exception"
+                        }
+                    ],
+                    "notes": "\u76ee\u524d\u95e8\u5e97\u4ec5\u652f\u6301\u4e00\u4e2a\u8d26\u53f7\uff0c\u540e\u671f\u53ef\u66f4\u6539",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/withdraws/apply",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u7533\u8bf7\u63d0\u73b0",
+                    "nickname": "apply",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "body",
+                            "name": "m_body",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u9700\u8981\u7684\u6570\u636e:aes(supplier_id=x, app_key)",
+                            "defaultValue": "u+YqIdUgApzljMTNsQP81A2OVxYfw+vM5JFgDwnTmYM="
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u7533\u8bf7\u63d0\u73b0\u6210\u529f"
+                        },
+                        {
+                            "code": 401,
+                            "message": "\u7528\u6237\u65e0\u6743\u8fdb\u884c\u8be5\u64cd\u4f5c"
+                        },
+                        {
+                            "code": 404,
+                            "message": "not found"
+                        },
+                        {
+                            "code": 422,
+                            "message": "Validation exception"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u7f51\u7edc\u9519\u8bef"
+                        }
+                    ],
+                    "notes": "\u63d0\u73b0\u65f6\uff0c\u4f1a\u76f4\u63a5\u63d0\u53d6\u95e8\u5e97\u5728\u5e73\u53f0\u6240\u6709\u91d1\u989d",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/withdraws/supplier_fee",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u95e8\u5e97\u6700\u65b0\u7684\u91d1\u989d\u4fe1\u606f",
+                    "nickname": "get_fee",
+                    "type": "FundRecord",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "supplier_id",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u95e8\u5e97\u7684id\uff0caes(supplier_id=xxx, app_key)",
+                            "defaultValue": "u+YqIdUgApzljMTNsQP81A2OVxYfw+vM5JFgDwnTmYM="
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u627e\u5230\u4fe1\u606f"
+                        },
+                        {
+                            "code": 405,
+                            "message": "Validation exception"
+                        }
+                    ],
+                    "notes": "\u603b\u6536\u5165=\u53ef\u63d0\u73b0\u91d1\u989d+\u5df2\u652f\u4ed8\u91d1\u989d",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/withdraws/{supplier_id}/list_withdraw",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u95e8\u5e97\u63d0\u73b0\u8bb0\u5f55",
+                    "nickname": "apply",
+                    "type": "WithdrawCashLog",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "supplier_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8d26\u53f7\u6240\u6709\u8005id \u95e8\u5e97\u6216\u8005\u7406\u53d1\u5e08"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "page",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u9ed8\u8ba4\u83b7\u53d6\u7b2c\u4e00\u9875\u6570\u636e",
+                            "defaultValue": "1"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "per_page",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u5f00\u53d1\u9636\u6bb5\uff0c\u9ed8\u8ba42\u6761(\u5efa\u8bae\uff0c\u5982\u679c\u662fwifi\u60c5\u51b5\u4e0b\uff0c\u53ef\u6269\u5927\u8bf7\u6c42\u6570\uff0c\u82e5\u662f3g\u53ef\u51cf\u5c0f)",
+                            "defaultValue": "2"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u7533\u8bf7\u63d0\u73b0\u6210\u529f"
+                        },
+                        {
+                            "code": 401,
+                            "message": "\u7528\u6237\u65e0\u6743\u8fdb\u884c\u8be5\u64cd\u4f5c"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u627e\u5230\u76f8\u5173\u8bb0\u5f55"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u6570\u636e\u9a8c\u8bc1\u5f02\u5e38"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u7f51\u7edc\u9519\u8bef"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/withdraws/{user_id}/list_income",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6307\u5b9a\u7528\u6237\u7684\u8d44\u91d1\u660e\u7ec6",
+                    "nickname": "apply",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "user_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8d26\u53f7\u6240\u6709\u8005id \u95e8\u5e97\u6216\u8005\u7406\u53d1\u5e08"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7528\u6237\u7c7b\u578b\uff0csupplier:\u95e8\u5e97 barber:\u7406\u53d1\u5e08",
+                            "enum": [
+                                "supplier",
+                                "barber"
+                            ],
+                            "defaultValue": "supplier"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "fee_source",
+                            "type": "string",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u6536\u5165\u6765\u6e90,\u6b64\u5b57\u6bb5\u5728user_type=supplier\u65f6\u5fc5\u987b\u5b58\u5728\uff0csupplier:\u95e8\u5e97(\u6b64\u65f6\u7406\u53d1\u5e08\u4e0d\u5b58\u5728) barber:\u7406\u53d1\u5e08",
+                            "enum": [
+                                "supplier",
+                                "barber"
+                            ],
+                            "defaultValue": "supplier"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "page",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u9ed8\u8ba4\u83b7\u53d6\u7b2c\u4e00\u9875\u6570\u636e",
+                            "defaultValue": "1"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "per_page",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u5f00\u53d1\u9636\u6bb5\uff0c\u9ed8\u8ba42\u6761(\u5efa\u8bae\uff0c\u5982\u679c\u662fwifi\u60c5\u51b5\u4e0b\uff0c\u53ef\u6269\u5927\u8bf7\u6c42\u6570\uff0c\u82e5\u662f3g\u53ef\u51cf\u5c0f)",
+                            "defaultValue": "2"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u7533\u8bf7\u63d0\u73b0\u6210\u529f"
+                        },
+                        {
+                            "code": 401,
+                            "message": "\u7528\u6237\u65e0\u6743\u8fdb\u884c\u8be5\u64cd\u4f5c"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u627e\u5230\u76f8\u5173\u8bb0\u5f55"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u6570\u636e\u9a8c\u8bc1\u5f02\u5e38"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u7f51\u7edc\u9519\u8bef"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/withdraws/{user_id}/update_account",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u4fee\u6539\u7528\u6237\u8d26\u53f7",
+                    "nickname": "update_account",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "user_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8d26\u53f7\u6240\u6709\u8005id \u95e8\u5e97\u6216\u8005\u7406\u53d1\u5e08"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7528\u6237\u7c7b\u578b\uff0csupplier:\u95e8\u5e97 barber:\u7406\u53d1\u5e08 ,\u76ee\u524d\u4ec5\u652f\u6301supplier",
+                            "enum": [
+                                "supplier",
+                                "barber"
+                            ],
+                            "defaultValue": "supplier"
+                        },
+                        {
+                            "paramType": "body",
+                            "name": "m_body",
+                            "type": "FundAccount",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "aes(user_name=x&card_number&mobile=x&fund_id, token)",
+                            "defaultValue": "5z8wJ0QT+GgKVyHK5HgewCBiU7E9N02pdRyT7eBvbm26vSUTpZJtpyvYUMjC4jZn+IvVKm2w622lMx5ZSw716PGxFPsMV9xopK9ilZAk3yM="
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u4fee\u6539\u6570\u636e\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "not found"
+                        },
+                        {
+                            "code": 422,
+                            "message": "Validation exception"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "models": {
+        "FundAccount": {
+            "id": "FundAccount",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "user_id": {
+                    "description": "\u8d26\u6237\u62e5\u6709\u8005id",
+                    "type": "integer"
+                },
+                "user_type": {
+                    "description": "\u8eab\u4efd\u6807\u8bc6",
+                    "type": "string",
+                    "enum": [
+                        "supplier-\u95e8\u5e97",
+                        "consumer-\u7528\u6237",
+                        "barber-\u7406\u53d1\u5e08"
+                    ]
+                },
+                "user_name": {
+                    "description": "\u8d26\u6237\u5bf9\u5e94\u7684\u540d\u79f0",
+                    "type": "string"
+                },
+                "card_number": {
+                    "description": "\u8d26\u6237\u5361\u53f7",
+                    "type": "string"
+                },
+                "mobile": {
+                    "description": "\u624b\u673a\u53f7\u7801",
+                    "type": "string"
+                },
+                "pay_code": {
+                    "description": "\u652f\u4ed8\u65b9\u5f0fcode",
+                    "type": "string"
+                }
+            }
+        },
+        "FundRecord": {
+            "id": "FundRecord",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "draw_fee": {
+                    "description": "\u603b\u5171\u63d0\u73b0\u7684\u91d1\u989d",
+                    "type": "integer"
+                },
+                "balance_fee": {
+                    "description": "\u5e73\u53f0\u5269\u4f59\u989d\uff0c\u53ef\u4ee5\u63d0\u73b0\u7684",
+                    "type": "integer"
+                },
+                "user_id": {
+                    "description": "\u8d26\u6237\u62e5\u6709\u8005id",
+                    "type": "integer"
+                },
+                "user_type": {
+                    "description": "\u8eab\u4efd\u6807\u8bc6",
+                    "type": "string",
+                    "enum": [
+                        "supplier-\u95e8\u5e97",
+                        "barber-\u7406\u53d1\u5e08"
+                    ]
+                },
+                "status": {
+                    "description": "\u8be5\u6761\u8bb0\u5f55\u72b6\u6001",
+                    "type": "string",
+                    "enum": [
+                        "1-\u88ab\u51bb\u7ed3\u7684\u8d44\u91d1\u8bb0\u5f55",
+                        "2-\u672a\u63d0\u73b0\u7684\u8d44\u91d1\u8bb0\u5f55",
+                        "3-\u63d0\u73b0\u6210\u529f\u7684\u8d44\u91d1\u8bb0\u5f55",
+                        "4-\u9000\u6b3e\u7684\u8d44\u91d1\u8bb0\u5f55"
+                    ]
+                }
+            }
+        },
+        "WithdrawCashLog": {
+            "id": "WithdrawCashLog",
+            "properties": {
+                "id": {
+                    "description": "\u8d44\u91d1\u8d26\u53f7id",
+                    "$ref": "fund_account_id"
+                },
+                "supplier_id": {
+                    "description": "\u95e8\u5e97id",
+                    "type": "integer"
+                },
+                "cash_fee": {
+                    "description": "\u63d0\u73b0\u91d1\u989d\uff0c\u5355\u4f4d\u4e3a\u5206",
+                    "type": "integer"
+                },
+                "user_name": {
+                    "description": "\u8d26\u6237\u59d3\u540d",
+                    "type": "string"
+                },
+                "card_number": {
+                    "description": "\u5361\u53f7",
+                    "type": "string"
+                },
+                "pay_code": {
+                    "description": "\u652f\u4ed8\u65b9\u5f0f\u7f16\u7801",
+                    "type": "string"
+                },
+                "is_verify": {
+                    "description": "\u5ba1\u6838\u72b6\u6001\uff0c0\uff1a\u5ba1\u6838\u4e2d\uff0c1\uff1a\u5ba1\u6838\u6210\u529f\uff0c2\uff1a\u5ba1\u6838\u5931\u8d25",
+                    "type": "integer",
+                    "enum": [
+                        "0-\u5ba1\u6838\u4e2d",
+                        "1-\u5ba1\u6838\u6210\u529f",
+                        "2-\u5ba1\u6838\u5931\u8d25"
+                    ]
+                }
+            }
+        }
+    },
+    "produces": [
+        "application/json"
+    ]
+}

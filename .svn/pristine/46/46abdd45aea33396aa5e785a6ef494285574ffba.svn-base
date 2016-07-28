@@ -1,0 +1,43 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 退款与产品对应的表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateBackProductsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('back_products', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('back_order_id')->unique();// 退款的id
+            $table->integer('product_id')->index();// 产品id
+            $table->integer('supplier_id')->index();// 该产品属于的门店id
+            $table->string('category_name', 12);// 分类名称
+            $table->string('product_name', 20);// 产品名称
+            $table->integer('back_fee');// 要求退款的金额
+            $table->tinyInteger('back_number')->default(1);// 要求退的产品数，默认为1
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('back_products');
+    }
+}

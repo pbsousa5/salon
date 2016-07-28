@@ -1,0 +1,438 @@
+<?php
+
+namespace App\Salon\Services;
+
+
+use App\Salon\Repositories\SupplierRepository;
+use App\Libary\Util\Location;
+use App\Libary\Util\Geohash;
+use App\Salon\Supplier;
+use App\Salon\Repositories\ProductRepository;
+use Illuminate\Hashing\BcryptHasher;
+use App\Libary\Util\String;
+use Cache;
+use App\Salon\Repositories\ConsumeLogRepository;
+use App\Salon\Repositories\FundRecordRepository;
+use App\Salon\FundAccount;
+use App\Salon\Repositories\ReviewRepository;
+use App\Salon\Review;
+use App\Salon\OrderInfo;
+use Illuminate\Support\Str;
+use App\Salon\Barber;
+use App\Salon\Repositories\BarberRepository;
+use DB;
+use App\Salon\OrderProduct;
+use App\Salon\BarberProduct;
+use App\Salon\Repositories\WithdrawCashLogRepository;
+
+/**
+ * 
+ * 
+ * @desc 店家服务
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月28日
+ */
+class SupplierService
+{
+    /**
+     * 门店的数据仓库
+     * @var SupplierRepository
+     */
+    protected $supplierRe;
+    
+    /**
+     * 关注服务层
+     * @var FollowService
+     */
+    protected $followSer;
+    /**
+     * geohash算法对象
+     * @var App\Libary\Util\Geohash
+     */
+    protected $g;
+    
+    /**
+     * 消费关系数据仓库
+     * @var ConsumeLogRepository
+     */
+    protected $consumeLogRe;
+    
+    /**
+     * 资金数据仓库
+     * @var FundRecordRepository
+     */
+    protected $fundRe;
+    
+    /**
+     * 评论数据仓库
+     * @var ReviewRepository
+     */
+    protected $reviewRe;
+    
+    /**
+     * The BarberRepository instance.
+     * @var BarberRepository
+     */
+    protected $barberRe;
+    
+    /**
+     * The BarberService instance.
+     * @var BarberService
+     */
+    protected $barberSer;
+    
+    /**
+     * The NotifyService instance.
+     * @var NotifyService
+     */
+    protected $notifySer;
+    
+    /**
+     * The WithdrawCashLogRepository instance.
+     * @var WithdrawCashLogRepository
+     */
+    protected $withdrawCashLogRe;
+    
+    
+    public function __construct(
+            SupplierRepository $supplier,
+            FollowService $f,
+            Geohash $g,
+            ConsumeLogRepository $consumeLogRe,
+            FundRecordRepository $fundRe,
+            ReviewRepository $reviewRe,
+            BarberRepository $barberRe,
+            BarberService $barberSer,
+            NotifyService $notifySer,
+            WithdrawCashLogRepository $withdrawCashLogRe
+    ){
+        $this->supplierRe = $supplier;
+        $this->g = $g;
+        $this->followSer = $f;
+        $this->consumeLogRe = $consumeLogRe;
+        $this->fundRe = $fundRe;
+        $this->reviewRe = $reviewRe;
+        $this->barberRe = $barberRe;
+        $this->barberSer = $barberSer;
+        $this->notifySer = $notifySer;
+        $this->withdrawCashLogRe = $withdrawCashLogRe;
+    }
+    
+    /**
+     * 根据给定的条件，统计有多少条记录
+     *
+     * @param string $filed 统计的字段
+     * @param string $value 字段的值
+     * @return integer
+     */
+    public function count($filed, $value)
+    {
+        return $this->supplierRe->count([$filed => $value]);
+    }
+    
+    /**
+     * 门店列表，目前支持按照距离排序，按照评分排序，按照价格排序
+     * @param array $inputs 获取列表数据的条件
+     * @param integer $size 每页显示多少条数据
+     * @param integer $scope 截取字符串的范围(影响距离)
+     * @return Illuminate\Support\Collection
+     */
+    public function listSupplier($inputs = [], $scope = -1, $size = 10)
+    {
+        $flag = false;
+        if (!empty($inputs['latitude']) && !empty($inputs['longitude']) && $scope!=-1) {
+            $hash = $this->g->encode($inputs['latitude'], $inputs['longitude']);
+            $prefix = substr($hash, 0, $scope);
+            //取出相邻八个区域
+            $neighbors = $this->g->neighbors($prefix);
+            array_push($neighbors, $prefix);
+        
+            $values = '';
+            foreach ($neighbors as $key=>$val) {
+                $values .= '\'' . $val . '\'' .',';
+            }
+            $inputs['neighbors'] = substr($values, 0, -1);
+        }
+        
+        if (Str::equals('distance', $inputs['sortby'])) {
+            $flag = true;
+        }
+        
+        $list = $this->supplierRe->index($inputs, $scope, $size)->getCollection();
+        if ($list->isEmpty()) {
+            return $list;
+        }
+        
+        // 经纬度
+        $srcLongLat = implode(',', [$inputs['longitude'], $inputs['latitude']]);
+        foreach ($list as $key=>$val) {
+            $list[$key] = $this->handleData($val, $srcLongLat, $inputs);
+            // 排序需要
+            $sortdistance[$key] = $list[$key]->pitch;
+        }
+        // 检查是否需要排序
+        $data = $list->toArray();
+        if ($flag) {
+            array_multisort($sortdistance, SORT_ASC, $data);
+        }
+        
+        return collect($data);
+    }
+    
+    /**
+     * 处理数据
+     *
+     * @param mixed $data 需要处理的数据
+     * @param string $srcLongLat 用户的经纬度，用于计算距离
+     * @param array $extra 其他额外的数据
+     * @return mixed
+     */
+    public function handleData($data, $srcLongLat, $extra=[])
+    {
+        // 如果用户id存在，则需要检查用户是否关注该门店
+        if (!empty($extra) && array_key_exists('consumer_id', $extra)) {
+            $where = ['consumer_id'=>$extra['consumer_id'], 'user_id'=>$data->id];
+            $data->watcher = $this->followSer->checkStatus($where, 'supplier') ? 1 : 0;
+        } else {
+            $data->watcher = 0;
+        }
+        
+        // 检查门店是否有未审核的提现申请
+        $count = $this->withdrawCashLogRe->countApplyInfo($data->id, ['is_verify'=>0]);
+        $data->hasWithdraw = $count ? 1 : 0;// 1表示有提现，0：表示没有提现
+        
+        unset($data->distance);
+        $data->business_time = unserialize($data->business_time);
+        $data->phones = unserialize($data->phones);
+        $data->gallerys = unserialize($data->gallerys);
+        $data->reviews = unserialize($data->reviews);
+        $data->tags = unserialize($data->tags);
+        $data->hot_product_ids = unserialize($data->hot_product_ids);
+        $data->count = unserialize($data->count);
+        
+        // 获取理发师
+        $data->barber = $data->barber()->where('status', Barber::BARBER_STATUS_BIND)->take(2)->lists('head_img');
+        
+        // 获取产品
+        $data->products = $data->products()->where('is_delete', 0)->where('status', 1)->orderBy('sell_price', 'asc')->take(2)->get();
+        foreach ($data->products as $key => $product) {
+            $max_price = max($product->sell_price, $product->sign_price);#比价平台售价与签约价，取较大值让用户进行支付
+            
+            $data->products[$key]->sell_price = $max_price;
+            $data->products[$key]->url = config('appinit.apiurl')."products/{$product->id}/intro?type=supplier";
+            unset($data->products[$key]->rich_desc);
+            unset($data->products[$key]->sign_price);
+        }
+
+        // 计算距离
+        if (empty($data->longitude) || empty($data->latitude) || empty($srcLongLat)) {
+            // 如果店家为设置距离
+            $data->pitch = 0;
+        } else {
+            $destLongLat = implode(',', [$data->longitude, $data->latitude]);
+            $data->pitch = Location::getP2PDistance($srcLongLat, $destLongLat);
+        }
+        
+        $data->new_notify = 0;// 没有新消息
+        // 获取是否有未读消息
+        $hasNewNotify = $this->notifySer->getUserNotifyNotRead($data->id, 'supplier');
+        if ($hasNewNotify) {
+            $data->new_notify = 1;// 有新消息
+        }
+        
+        // 存入缓存
+        $cacheValue = [
+                'id' => $data->id,
+                'name' => $data->name,
+                'mobile' => $data->mobile,
+                'token' => '',
+                'longitude' => $data->longitude,
+                'latitude' => $data->latitude,
+                'channel_id' => '',
+                'source' => '',
+        ];
+        $cacehKey = 'supplier'.$data->id;
+        if (!Cache::has($cacehKey)) {
+            Cache::add($cacehKey, $cacheValue, config('appinit.expire'));
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * 
+     * 获取单个用户详细信息
+     * @param array $condition 查找信息，使用['id'=>1] or ['mobile'=>123]等等
+     * @param array $extra 传入的用户经纬度数组[longitude, latitude]
+     * @return array|null
+     */
+    public function getSingleInfo($condition=[], $extra=[])
+    {
+        $supplier = $this->supplierRe->show($condition);
+        if (is_null($supplier)) {
+            return null;
+        }
+        
+        $srcLongLat = ',';
+        if (! empty($extra) && array_key_exists('longitude', $extra) && array_key_exists('latitude', $extra)) {
+            $srcLongLat = implode(',', [$extra['longitude'], $extra['latitude']]);
+        }
+        
+        if (isset($extra['consumer_id'])) {
+            $consumer_id = $extra['consumer_id'];
+        } else {
+            $consumer_id = 0;
+        }
+        
+        return $this->handleData($supplier, $srcLongLat, ['consumer_id'=>$consumer_id]);
+    }
+    
+    /**
+     *
+     * 修改消费者基本信息
+     * @param array $where 更新的条件
+     * @param array $inputs 修改门店数据
+     * @return App\Salon\Consumer|null
+     */
+    public function modifySupplier($where, $inputs)
+    {
+        return $this->supplierRe->update($where, $inputs);
+    }
+    
+    /**
+     * 获取门店的所有客户
+     *
+     * @param integer $supplier_id 门店id
+     * @param integer $size 获取多少条
+     * @return Illuminate\Database\Eloquent\Collection
+     */
+    public function getCustomerList($supplier_id, $size=10)
+    {
+        $consumer = [];
+        $list = $this->consumeLogRe->index(compact('supplier_id'), 'consumer_id', $size)->getCollection();
+
+        foreach ($list as $key=>$val) {
+            if (empty($val->consumer->nickname)) {
+                $val->consumer->nickname = '';
+            }
+            if (empty($val->consumer->head_img)) {
+                $val->consumer->head_img = '';
+            }
+            if (empty($val->consumer->age_tag)) {
+                $val->consumer->age_tag = '';
+            }
+            
+            unset($val->consumer->my_bean);
+            unset($val->consumer->my_coupon);
+            unset($val->consumer->weight);
+            unset($val->consumer->invitation_code);
+            
+            $consumer[$key] = $val->consumer;
+        }
+        
+        return collect($consumer);
+    }
+    
+    /**
+     * 门店绑定理发师
+     * 
+     * @param int $supplier_id 门店id
+     * @param string $barber_mobile 理发师11位手机号码
+     * @return Barber
+     */
+    public function bindBarber($supplier_id, $barber_mobile)
+    {
+        $barber = $this->barberRe->show(['mobile'=>$barber_mobile]);
+        
+        // 获取门店
+        $supplier = $this->supplierRe->show(['id'=>$supplier_id]);
+        // 获取门店地址
+        $address = $supplier->address()->where('user_type', 'supplier')->first();
+        $inputs['geohash'] = $address->distance;
+        $inputs['longitude'] = $address->longitude;
+        $inputs['latitude'] = $address->latitude;
+        $inputs['province'] = $address->province;
+        $inputs['city'] = $address->city;
+        $inputs['district'] = $address->district;
+        $inputs['detail'] = $address->detail;
+        
+        if (! is_null($barber) && $barber->barber_status==5) {// 门店已绑定
+            return null;
+        }
+        
+        if (! is_null($barber) && $barber->barber_status != Barber::BARBER_STATUS_NOT_LOGIN) {// 门店已经存在，但是处于未被绑定的状态，则更新其supplier_id
+            $inputs['supplier_id'] = $supplier_id;
+            $inputs['status'] = Barber::BARBER_STATUS_LOGIN_NOT_ADD_PRO;
+            $this->barberRe->update(['mobile'=>$barber_mobile], $inputs);
+            return $this->barberSer->handleData($barber, '');
+        }
+        
+        if (is_null($barber)) {// 理发师不存在，则创建该理发师
+            $inputs['mobile'] = $barber_mobile;
+            $inputs['supplier_id'] = $supplier_id;
+            $inputs['password'] = config('appinit.init_pwd');
+            
+            return $this->barberSer->addBarber($inputs);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 门店解绑理发师
+     *
+     * @param int $supplier_id 门店id
+     * @param int $barber_id 理发师id
+     * @return boolean
+     */
+    public function unbundBarber($supplier_id, $barber_id)
+    {
+        // 检查是否能够解绑,如果还有未完成订单，则不能解绑
+        $count = OrderProduct::where('barber_id', $barber_id)->where('product_status', OrderProduct::PRODUCT_STATUS_CAN_USE)->count();
+        if ($count != 0) {
+            return false;
+        }
+        
+        // 检查该门店是否绑定过该理发师
+        $count = Barber::where('id', $barber_id)->where('supplier_id', $supplier_id)->count();
+        if ($count == 0) {
+            return false;
+        }
+        
+        // 门店信息
+        $supplier = Supplier::where('id', $supplier_id)->first();
+        
+        // 执行解绑操作
+        DB::beginTransaction();
+        
+        $flag = $this->barberRe->update(
+                ['id'=>$barber_id, 'supplier_id'=>$supplier_id],
+                ['supplier_id'=>0, 'status'=>Barber::BARBER_STATUS_NOT_BIND]
+        );
+        if (is_null($flag)) {
+            DB::rollback();
+            return false;
+        }
+        
+        // 删除项目
+        $flag = BarberProduct::where(['barber_id'=>$barber_id, 'supplier_id'=>$supplier_id])->delete();
+        if (! $flag) {
+            DB::rollback();
+            return false;
+        }
+        
+        // 减少门店理发师个数
+        $supplier->staff_count -= 1;
+        if (!$supplier->save()) {
+            DB::rollback();
+            return false;
+        }
+        
+        DB::commit();
+        return true;
+        
+        // 理发师解绑后，更新理发师的mongodb中的状态为不可查询状态
+        $barber = Barber::where('id', $barber_id)->first();
+        $this->barberSer->barberToMongdb($barber, 'update');
+    }
+}

@@ -1,0 +1,58 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 理发师数据库表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月27日
+ */
+class CreateBarbersTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('barbers', function(Blueprint $table) {
+            $table->increments('id');
+            $table->string('account', 32)->unique();// 账户，原则上与mobile相同，若是第三方则不同
+            $table->char('mobile', 11)->unique();// 手机号码
+            $table->string('descript')->default('暂无');// 简介
+            $table->string('password', 60);// 密码
+            $table->string('title', 32);// 理发师职位
+            $table->string('nickname', 20)->nullable();// 昵称
+            $table->string('realname', 20)->nullable();// 真实姓名
+            $table->string('head_img', 32)->nullable();// 头像
+            $table->enum('gender', ['-1','0','1'])->default(-1);// 性别，1：男，0：女 -1未设置
+            $table->date('birthday')->nullable();// 生日
+            $table->string('email', 32)->default('');// 理发师邮箱
+            $table->integer('supplier_id')->default(0);// 理发师所属门店
+            $table->tinyInteger('work_life')->default(0);// 工作年限
+            $table->char('geohash', 12)->nullable();// geohash值，用来进行位置排序
+            $table->string('longitude', 10)->nullable(); //经度(-180, 180)
+            $table->string('latitude', 10)->nullable(); //纬度度(-90, 90)
+            $table->string('province', 10);// 省
+            $table->string('city', 20);// 市
+            $table->string('district', 20);// 区
+            $table->string('detail', 32);// 详细地址
+            $table->enum('status', [1, 2, 3, 4, 5, 6])->default(1);// 理发师状态，1：从未登陆，2：登陆未完善资料，3:拒绝绑定， 4：登陆未添加项目， 5：绑定门店 6:已解绑
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('barbers');
+    }
+}

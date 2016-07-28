@@ -1,0 +1,49 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 退款表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateBackOrdersTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('back_orders', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('order_info_id')->index();// 对应的订单id
+            $table->integer('order_product_id')->unique();// 具体退款的某一款产品
+            $table->string('trade_no', 64);// 交易号
+            $table->integer('consumer_id');// 消费者id
+            $table->string('postscript', 255)->nullable();// 退单说明
+            $table->integer('back_fee');// 退款金额,单位为分
+            $table->tinyInteger('back_status')->default(0);// 退款状态 0：审核中，1：退单成功，2：退单失败
+            $table->integer('bean_amount')->default(0);// 消费者的积分
+            $table->integer('consumer_coupon_id');// 消费的优惠券id，此处优惠券不一定返回给用户
+            $table->string('consumer_name', 10);// 购买者姓名
+            $table->char('consumer_mobile', 11);// 购买者电话号码
+            $table->string('consumer_head', 32);// 购买者头像
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('back_orders');
+    }
+}

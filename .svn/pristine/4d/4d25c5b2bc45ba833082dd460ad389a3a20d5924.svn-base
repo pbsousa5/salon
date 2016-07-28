@@ -1,0 +1,43 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 门店、理发师的资金账号
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateFundAccountsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('fund_accounts', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('user_id');// 门店或者理发师
+            $table->enum('user_type', ['supplier','consumer','barber'])->default('supplier');// 身份标识，supplier：门店 consumer:用户 barber:理发师
+            $table->string('user_name', 20);// 用户账户姓名
+            $table->string('card_number', 32);// 用户卡号
+            $table->char('mobile', 11);// 与卡号对应的手机号码
+            $table->string('pay_code', 12);// 对应的支付类型code
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('fund_accounts');
+    }
+}

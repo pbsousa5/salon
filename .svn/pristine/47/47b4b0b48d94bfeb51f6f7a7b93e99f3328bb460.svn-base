@@ -1,0 +1,99 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/BackOrder",
+    "apis": [
+        {
+            "path": "/back_orders/{order_id}",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u6dfb\u52a0\u4e00\u4e2a\u9000\u5355\u7533\u8bf7",
+                    "nickname": "back_orders",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "order_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u9000\u6b3e\u7684\u8ba2\u5355id"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "order_product_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u9000\u6b3e\u7684\u8ba2\u5355\u4ea7\u54c1id"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "consumer_id",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u7528\u6237id,\u4f7f\u7528aes\u52a0\u5bc6\uff0ckey\u4e3a\u521d\u59cb\u63a5\u53e3\u8fd4\u56de\u7684app_key\u3002aes(consumer_id=xx, app_key)",
+                            "defaultValue": "E1/WNXI/3ePaAmwvqg5SSO7FiXRiyOOdfoiOAid7eKk="
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "postscript",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u9000\u5355\u7406\u7531"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u9000\u5355\u7533\u8bf7\u63d0\u4ea4\u6210\u529f"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u8bf7\u6c42\u6570\u636e\u9a8c\u8bc1\u5931\u8d25"
+                        },
+                        {
+                            "code": 405,
+                            "message": "Validation exception"
+                        }
+                    ],
+                    "notes": "\u53ea\u6709\u4ed8\u6b3e\u672a\u6d88\u8d39\u7684\u8ba2\u5355\u624d\u80fd\u8fdb\u884c\u9000\u6b3e\u7533\u8bf7",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "produces": [
+        "application/json"
+    ]
+}

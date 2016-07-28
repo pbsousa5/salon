@@ -1,0 +1,249 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/Helper",
+    "apis": [
+        {
+            "path": "/helper/aes_decode",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u89e3\u5bc6\u52a0\u5bc6\u540e\u7684aes\u6570\u636e",
+                    "nickname": "aes_decode",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "form",
+                            "name": "data",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u52a0\u5bc6\u7684aes\u6570\u636e",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "secret_key",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u89e3\u5bc6\u7684\u79d8\u94a5\uff0c16\u6216\u800532\u4f4d",
+                            "defaultValue": "VVSOYqny5qWCnkoLHvnmm23FN4Cydmfd"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u52a0\u5bc6\u6210\u529f"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u52a0\u5bc6\u5931\u8d25"
+                        }
+                    ],
+                    "notes": "\u79d8\u94a5\u5fc5\u987b\u4e3a16\u6216\u800532\u4f4d",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/helper/aes_encode",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u751f\u6210aes\u52a0\u5bc6\u6570\u636e",
+                    "nickname": "aes_encode",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "form",
+                            "name": "data",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u52a0\u5bc6\u7684\u6570\u636e,\u683c\u5f0f\u4e3a\uff1amobile=18683338412&password=123456",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "form",
+                            "name": "secret_key",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u52a0\u5bc6\u7684\u79d8\u94a5\uff0c16\u6216\u800532\u4f4d",
+                            "defaultValue": "VVSOYqny5qWCnkoLHvnmm23FN4Cydmfd"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u52a0\u5bc6\u6210\u529f"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u52a0\u5bc6\u5931\u8d25"
+                        }
+                    ],
+                    "notes": "\u79d8\u94a5\u5fc5\u987b\u4e3a16\u6216\u800532\u4f4d",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/helper/check_sign",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u68c0\u9a8curl\u7b7e\u540d\u662f\u5426\u6b63\u786e",
+                    "nickname": "check_sign",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": true,
+                            "description": "url\u7b7e\u540d",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u9a8c\u8bc1\u6210\u529f"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u9519\u8bef"
+                        }
+                    ],
+                    "notes": "\u79d8\u94a5\u662f\u670d\u52a1\u7aef\u521d\u59cb\u63a5\u53e3\u8fd4\u56de\u7684",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/helper/sign",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u6839\u636e\u65f6\u95f4\u6233\uff0c\u968f\u673a\u5b57\u7b26\u4e32\u751f\u6210url\u7b7e\u540d",
+                    "nickname": "sign",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "secret_key",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u89e3\u5bc6\u7684\u79d8\u94a5\uff0c\u670d\u52a1\u7aef\u4e0b\u53d1\u7684",
+                            "defaultValue": "VVSOYqny5qWCnkoLHvnmm23FN4Cydmfd"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u7b7e\u540d\u6210\u529f"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u7aef\u9519\u8bef"
+                        }
+                    ],
+                    "notes": "\u79d8\u94a5\u662f\u670d\u52a1\u7aef\u521d\u59cb\u63a5\u53e3\u8fd4\u56de\u7684",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/helper/{id}/token",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6307\u5b9aid\u7684token",
+                    "nickname": "token",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "path",
+                            "name": "id",
+                            "type": "integer",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u8981\u83b7\u53d6\u7684\u8d44\u6e90id"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u6210\u529f"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u5931\u8d25"
+                        }
+                    ],
+                    "notes": "\u83b7\u53d6\u7684token\u662f\u672a\u52a0\u5bc6\u7684token\uff0c\u8bf7\u76f4\u63a5\u4f7f\u7528\uff0c\u4e0d\u8981\u8fdb\u884caes\u89e3\u5bc6\u64cd\u4f5c",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "produces": [
+        "application/json"
+    ]
+}

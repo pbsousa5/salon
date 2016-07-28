@@ -1,0 +1,40 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 优惠券表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateCouponsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('coupons', function(Blueprint $table){
+            $table->increments('id');
+            $table->smallInteger('face_fee');// 面额，只能为整数
+            $table->integer('valid_term');// 到期时间
+            $table->smallInteger('full_cat')->default(0);// 表示满多少减，只能为整数.0表示没有限制
+            $table->text('configs')->nullable();// 其他条件
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('coupons');
+    }
+}

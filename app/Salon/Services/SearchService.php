@@ -1,0 +1,162 @@
+<?php
+
+namespace App\Salon\Services;
+
+use App\Salon\Repositories\AddressRepository;
+use App\Salon\Supplier;
+use App\Salon\Repositories\SupplierRepository;
+
+/**
+ * 
+ * 
+ * @desc 搜索服务
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月28日
+ */
+class SearchService
+{
+    /**
+     * 门店服务层
+     * @var SupplierService
+     */
+    protected $supplierSer;
+    
+    /**
+     * 地址的数据仓库
+     * @var AddressRepository
+     */
+    protected $addressRe;
+    
+    /**
+     * 门店数据层
+     * @var SupplierRepository
+     */
+    protected $supplierRe;
+    
+    public function __construct(
+            SupplierService $supplierSer,
+            SupplierRepository $supplierRe,
+            AddressRepository $addressRe
+    ){
+        $this->supplierSer = $supplierSer;
+        $this->supplierRe = $supplierRe;
+        $this->addressRe = $addressRe;
+    }
+    
+    /**
+     * 搜索信息
+     * @param array $where 搜索的条件
+     * @param integer $search_model 搜索模式， 1：获取总条数，2：获取详细数据
+     * @param integer $search_type 搜索类型, 1:按店名，2:按区域，3:按地址
+     * @param integer $size 每次获取多少条，当为1时，忽略该数据
+     * @return Illuminate\Support\Collection
+     */
+    public function search($where, $search_model=1, $search_type='', $size=10)
+    {
+        if ($search_model == 1) {
+            $cName = $this->searchStoreName($where);
+            $cArea = $this->searchArea($where);
+            $cAddress = $this->searchAddress($where);
+            
+            $count = $this->countTotal($where['q']);
+            return compact('cName', 'cArea', 'cAddress', 'count');
+        }
+        
+        switch ($search_type) {
+            case 1:// 按店名字搜索
+                $list = $this->searchStoreName($where, $search_model, $size);
+                break;
+            case 2:// 按区域搜索
+                $list = $this->searchArea($where, $search_model, $size);
+                break;
+            case 3:// 按地址搜索
+                $list = $this->searchAddress($where, $search_model, $size);
+                break;
+            default:// 获取名字、区域、地址搜索
+                $where['type'] = 'search';
+                $list = $this->supplierSer->listSupplier($where, -1, $size);
+                break;
+        }
+        
+        return $list;
+    }
+    
+    /**
+     * 
+     * 统计按照地址、店名、门店区域来统计店铺数量
+     */
+    private function countTotal($search_key)
+    {
+        return Supplier::where('suppliers.name', 'like', "%{$search_key}%")
+                            ->orWhere('addresss.district', 'like', "%{$search_key}%")
+                            ->orWhere('addresss.detail', 'like', "%{$search_key}%")
+                            ->leftJoin('addresss', 'suppliers.id', '=', 'addresss.user_id')
+                            ->count();
+    }
+    
+    /**
+     * 搜索信息
+     * @param array $where 搜索的条件
+     * @param integer $model 查询模式， 1：获取总条数，2：获取详细数据
+     * @param integer $size 每次获取多少条，当为1时，忽略该数据
+     * @return Illuminate\Support\Collection
+     */
+    protected function searchStoreName($where, $model=1, $size=10)
+    {
+        switch ($model) {
+            case 1:
+                $count = $this->supplierSer->count('name', $where['q']);
+                return $count;
+            case 2:
+                $where['name'] = $where['q'];
+                $where = array_remove_keys($where, ['q']);
+                return $this->supplierSer->listSupplier($where, -1, $size);
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * 搜索信息
+     * @param array $where 搜索的条件
+     * @param integer $model 查询模式， 1：获取总条数，2：获取详细数据
+     * @param integer $size 每次获取多少条，当为1时，忽略该数据
+     * @return Illuminate\Support\Collection
+     */
+    protected function searchArea($where, $model=1, $size=10)
+    {
+        switch ($model) {
+            case 1:
+                $count = $this->addressRe->count(['district' => $where['q']]);
+                return $count;
+            case 2:
+                $where['district'] = $where['q'];
+                $where = array_remove_keys($where, ['q']);
+                return $this->supplierSer->listSupplier($where, -1, $size);
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * 搜索信息
+     * @param array $where 搜索的条件
+     * @param integer $model 查询模式， 1：获取总条数，2：获取详细数据
+     * @param integer $size 每次获取多少条，当为1时，忽略该数据
+     * @return Illuminate\Support\Collection
+     */
+    protected function searchAddress($where, $model=1, $size=10)
+    {
+        switch ($model) {
+            case 1:
+                $count = $this->addressRe->count(['detail' => $where['q']]);
+                return $count;
+            case 2:
+                $where['detail'] = $where['q'];
+                $where = array_remove_keys($where, ['q']);
+                return $this->supplierSer->listSupplier($where, -1, $size);
+            default:
+                return null;
+        }
+    }
+}

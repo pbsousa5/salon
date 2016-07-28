@@ -1,0 +1,590 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/Product",
+    "apis": [
+        {
+            "path": "/products/list_caegory",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6240\u6709\u5206\u7c7b\u4fe1\u606f",
+                    "nickname": "list_category",
+                    "type": "ProductCategory",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u5206\u7c7b\u4fe1\u606f\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u627e\u5230\u4efb\u4f55\u5206\u7c7b\u4fe1\u606f"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u53d1\u751f\u5f02\u5e38"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/products/sign/{product_id}",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u67d0\u4e00\u4e2a\u5546\u54c1\u7684\u8be6\u7ec6\u4fe1\u606f,\u8fd4\u56de\u4e00\u4e2amodel",
+                    "nickname": "info_sign",
+                    "type": "Product",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7528\u6237\u7c7b\u578b\uff0csupplier:\u95e8\u5e97 barber:\u7406\u53d1\u5e08",
+                            "enum": [
+                                "supplier",
+                                "barber"
+                            ],
+                            "defaultValue": "supplier"
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "product_id",
+                            "type": "integer",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u6307\u5b9a\u8d44\u6e90\u7684id"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u627e\u5230\u4f60\u60f3\u8981\u83b7\u53d6\u7684\u6570\u636e"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u8bf7\u6c42\u6570\u636e\u9a8c\u8bc1\u5931\u8d25"
+                        }
+                    ],
+                    "notes": "\u8be5\u63a5\u53e3\uff0c\u53ef\u80fd\u4f1a\u5728\u8ba2\u5355\u4e2d\u7528\u4e8e\u76f4\u63a5\u67e5\u770b\u67d0\u4e2a\u4ea7\u54c1\u4fe1\u606f,\u6216\u8005\u5237\u65b0\u5355\u4e2a\u4ea7\u54c1\u4fe1\u606f",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/products/{product_id}/intro",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6307\u5b9a\u8d44\u6e90id\u7684\u5bcc\u6587\u672c\u4ecb\u7ecd\u4fe1\u606f",
+                    "nickname": "intro",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "path",
+                            "name": "product_id",
+                            "type": "integer",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u4ea7\u54c1\u8d44\u6e90id"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u83b7\u53d6\u7684\u4ea7\u54c1\u5bf9\u8c61\uff0csupplier barber",
+                            "enum": [
+                                "barber",
+                                "supplier"
+                            ],
+                            "defaultValue": "barber"
+                        }
+                    ],
+                    "notes": "\u8fd4\u56de\u7684\u662f\u4e00\u4e2aH5\u9875\u9762",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/products/{supplier_id}/add",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u6dfb\u52a0\u4ea7\u54c1",
+                    "nickname": "p_add",
+                    "type": "Product",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "supplier_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8981\u6dfb\u52a0\u7684\u8d44\u6e90\u4ea7\u54c1\u62e5\u6709\u8005\u95e8\u5e97\u7684id"
+                        },
+                        {
+                            "paramType": "body",
+                            "name": "m_data",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u6dfb\u52a0\u7684\u6570\u636e,aes\u52a0\u5bc6(\u6b64\u5904\u76f4\u63a5\u52a0\u5bc6json\u5b57\u7b26\u4e32),token\u4f5c\u4e3a\u79d8\u94a5",
+                            "defaultValue": "wEYKu5tBLC3iixJ34fWUVjUywIwVUqJxDclNIb1lXOU2uWm0Pyvc/prHCNWJpvyg9orJG94+PKDXpbG5pZJRbBJlk0bFrEFYg0gohkQVkw3MZJ0srbGrTsTGZmhHJsrUjhsrSkbuBHQGikIu/KIGLaQp3FdRzUGaWL9QBExquw0CRPolYr4RvQcIJ4xlQ0Jmt9AkQflFdR0/VBIciRNOXOtKcIyxDtB1nSGtkSbg7K1OXTe79ifVOiA47L0f6JF1"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u6dfb\u52a0\u6210\u529f"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u6570\u636e\u9a8c\u8bc1\u672a\u901a\u8fc7"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u5f02\u5e38"
+                        }
+                    ],
+                    "notes": "\u4ea7\u54c1\u8be6\u60c5\u9875\u53ea\u80fd\u5728web\u7aef\u8fdb\u884c\u6dfb\u52a0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/products/{supplier_id}/delete/{product_id}",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u5220\u9664\u4ea7\u54c1",
+                    "nickname": "p_edit",
+                    "type": "void",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "supplier_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8981\u5220\u9664\u7684\u8d44\u6e90\u4ea7\u54c1\u62e5\u6709\u8005\u95e8\u5e97\u7684id"
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "product_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8981\u5220\u9664\u7684\u8d44\u6e90\u4ea7\u54c1id"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 204,
+                            "message": "\u5220\u9664\u6210\u529f"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u6570\u636e\u9a8c\u8bc1\u672a\u901a\u8fc7"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u5f02\u5e38"
+                        }
+                    ],
+                    "notes": "\u5220\u9664\u540e\u5c06\u4e0d\u53ef\u6062\u590d",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/products/{supplier_id}/edit/{product_id}",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "\u4fee\u6539\u4ea7\u54c1\u57fa\u672c\u4fe1\u606f",
+                    "nickname": "p_edit",
+                    "type": "Product",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "supplier_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8981\u4fee\u6539\u7684\u8d44\u6e90\u6240\u5c5e\u95e8\u5e97id"
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "product_id",
+                            "type": "integer",
+                            "required": true,
+                            "description": "\u8981\u4fee\u6539\u7684\u8d44\u6e90\u4ea7\u54c1id"
+                        },
+                        {
+                            "paramType": "body",
+                            "name": "m_data",
+                            "type": "string",
+                            "required": true,
+                            "description": "\u4fee\u6539\u7684\u6570\u636e,aes\u52a0\u5bc6,token\u4f5c\u4e3a\u79d8\u94a5",
+                            "defaultValue": "wEYKu5tBLC3iixJ34fWUVjUywIwVUqJxDclNIb1lXOU2uWm0Pyvc/prHCNWJpvyg9orJG94+PKDXpbG5pZJRbBJlk0bFrEFYg0gohkQVkw3MZJ0srbGrTsTGZmhHJsrUjhsrSkbuBHQGikIu/KIGLaQp3FdRzUGaWL9QBExquw0CRPolYr4RvQcIJ4xlQ0Jmt9AkQflFdR0/VBIciRNOXOtKcIyxDtB1nSGtkSbg7K1OXTe79ifVOiA47L0f6JF1"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "\u4fee\u6539\u6210\u529f"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u6570\u636e\u9a8c\u8bc1\u672a\u901a\u8fc7"
+                        },
+                        {
+                            "code": 500,
+                            "message": "\u670d\u52a1\u5668\u5f02\u5e38"
+                        }
+                    ],
+                    "notes": "\u4ea7\u54c1\u8be6\u60c5\u9875\u53ea\u80fd\u5728web\u7aef\u8fdb\u884c\u4fee\u6539",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        },
+        {
+            "path": "/products/{user_id}/list",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6307\u5b9a\u95e8\u5e97\u7684\u4ea7\u54c1\u5217\u8868",
+                    "nickname": "p_list",
+                    "type": "Product",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "user_id",
+                            "type": "integer",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u95e8\u5e97id\u6216\u8005\u7406\u53d1\u5e08id"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "user_type",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7528\u6237\u7c7b\u578b\uff0csupplier:\u95e8\u5e97 barber:\u7406\u53d1\u5e08",
+                            "enum": [
+                                "supplier",
+                                "barber"
+                            ],
+                            "defaultValue": "supplier"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6570\u636e\u6210\u529f"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u672a\u53d1\u73b0\u4f60\u60f3\u8981\u7684\u6570\u636e"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u6570\u636e\u9a8c\u8bc1\u5931\u8d25"
+                        }
+                    ],
+                    "notes": "\u65e0",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "models": {
+        "ProductCategory": {
+            "id": "ProductCategory",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "\u4ea7\u54c1\u5206\u7c7b\u540d",
+                    "type": "string"
+                },
+                "describe": {
+                    "description": "\u5bf9\u5206\u7c7b\u7684\u8bf4\u660e",
+                    "type": "string"
+                }
+            }
+        },
+        "Product": {
+            "id": "Product",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "supplier_id": {
+                    "description": "\u95e8\u5e97id",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "\u72b6\u6001,\u4e0b\u67b6\u7684\u5546\u54c1\u4e0d\u4f1a\u8fd4\u56de\u5230app\u4e2d",
+                    "type": "integer",
+                    "enum": [
+                        "0-\u552e\u7f44",
+                        "1-\u5728\u552e",
+                        "2-\u4e0b\u67b6"
+                    ]
+                },
+                "category": {
+                    "description": "\u5206\u7c7b\u7684\u4fe1\u606f",
+                    "$ref": "ProductCategory"
+                },
+                "product_name": {
+                    "description": "\u4ea7\u54c1\u7684\u540d\u79f0",
+                    "type": "string"
+                },
+                "product_desc": {
+                    "description": "\u4ea7\u54c1\u7684\u63cf\u8ff0",
+                    "type": "string"
+                },
+                "sell_price": {
+                    "description": "\u552e\u4ef7\uff0c\u5355\u4f4d\u4e3a\u5206",
+                    "type": "integer"
+                },
+                "original_price": {
+                    "description": "\u539f\u4ef7\uff0c\u5355\u4f4d\u4e3a\u5206",
+                    "type": "integer"
+                },
+                "total_stock": {
+                    "description": "\u5e93\u5b58\uff0c0\u8868\u793a\u6ca1\u6709\u9650\u5236",
+                    "type": "integer"
+                },
+                "quota_num": {
+                    "description": "\u9650\u8d2d\u6570\uff0c0\u8868\u793a\u6ca1\u6709\u9650\u5236",
+                    "type": "integer"
+                },
+                "sold_type": {
+                    "description": "\u7b49\u4e8e1\u65f6\uff0c\u9700\u8981\u5224\u65ad\u5f53\u524d\u65f6\u95f4\u6233\u5927\u4e8e\u7b49\u4e8e\u6307\u5b9a\u65f6\u95f4\u6233",
+                    "type": "integer",
+                    "enum": [
+                        "0-\u7acb\u523b\u51fa\u552e",
+                        "1-\u5b9a\u65f6\u51fa\u552e"
+                    ]
+                },
+                "start_sold_time": {
+                    "description": "\u5b9a\u65f6\u51fa\u552e\u7684\u65f6\u95f4\u6233",
+                    "type": "integer"
+                },
+                "rich_desc": {
+                    "description": "\u5bcc\u6587\u672c\u63cf\u8ff0",
+                    "type": "string"
+                },
+                "is_real": {
+                    "description": "\u662f\u5426\u662f\u5b9e\u7269\u5546\u54c1",
+                    "type": "integer",
+                    "enum": [
+                        "0-\u4e0d\u662f",
+                        "1-\u662f"
+                    ]
+                }
+            }
+        }
+    },
+    "produces": [
+        "application/json"
+    ]
+}

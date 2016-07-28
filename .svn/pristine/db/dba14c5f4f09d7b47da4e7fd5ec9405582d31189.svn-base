@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 评价的标签
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateReviewTagsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('review_tags', function(Blueprint $table){
+            $table->increments('id');
+            $table->string('name', 15);// 标签名称
+            $table->enum('type', [1, 2, 3])->default(1);// 标签类型，1：好，2：中，3：差
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('review_tags');
+    }
+}

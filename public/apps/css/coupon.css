@@ -1,0 +1,179 @@
+body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,
+form,fieldset,input,textarea,p,blockquote,th,td {
+    padding: 0;
+    margin: 0;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+fieldset,img {
+    border: 0;
+}
+address,caption,cite,code,dfn,em,strong,th,var {
+    font-weight: normal;
+    font-style: normal;
+}
+ol,ul {
+    list-style: none;
+}
+caption,th {
+    text-align: left;
+}
+h1,h2,h3,h4,h5,h6 {
+    font-weight: normal;
+    font-size: 100%;
+}
+q:before,q:after {
+    content:'';
+}
+abbr,acronym { border: 0;
+}
+
+body,html{
+    font-size: 14px;
+}
+
+body{
+    width: 100%;
+    height: 100%;
+    background-image: url("../img/coupon/background.jpg");
+    background-repeat: repeat;
+}
+
+.frontImage{
+    width: 100%;
+    height: auto;
+}
+
+.phoneNumber{
+    width: 100%;
+    height: 3.6rem;
+    text-align: center;
+    border-top: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.phoneNumberInput{
+    width: 100%;
+    height: 3.6rem;
+    color: #4c4c4c;
+    line-height: 3.6rem;
+    border: none;
+    outline: none;
+    text-align: center;
+    font-size: 1.43rem;
+}
+
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0;
+}
+
+.getBtnBox{
+    margin-top: 1.43rem;
+    height: auto;
+    padding: 0 1.3rem 0 1.3rem;
+}
+
+.getBtn{
+    height: 3.2rem;
+    line-height: 3.2rem;
+    text-align: center;
+    width: 100%;
+    background-color: #fe4d3d;
+    border-radius: 0.2rem;
+    font-size: 1.43rem;
+    color: white;
+}
+
+.coupon{
+    margin-top: 0.6rem;
+    padding: 0 3.4rem 0 3.4rem;
+    position: relative;
+}
+
+.couponImg{
+    width: 100%;
+    background-image: url("../img/coupon/coupon.svg");
+    background-size:100% 100%;
+}
+
+.couponText{
+    width: 47%;
+    height: 72%;
+    position: absolute;
+    left: 34.7%;
+    top: 13%;
+    color: red;
+    text-align: center;
+}
+
+.currentPhone{
+    margin-top: 1.1rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.currentPhoneText{
+    color: #4d4d4d;
+    margin-right: 0.57rem;
+}
+
+.currentPhoneNumber{
+    color: #ffbf00;
+    margin-right: 0.43rem;
+}
+
+.changeCurrentPhone{
+    color: #ffcc33;
+}
+
+
+.rmb{
+    font-size: 100%;
+}
+
+.rmbNumber{
+    font-size: 300%;
+}
+
+.rulesTitle{
+    height: 3rem;
+    margin-top: 2rem;
+    padding: 0 1.8rem 0 1.8rem;
+    position: relative;
+}
+
+.rulesTitleHr{
+    margin-top: 1.5rem;
+    border: 1px solid #ffc800;
+}
+
+.rulesTitleBtn{
+    width: 8.4rem;
+    height: 3rem;
+    line-height: 3rem;
+    margin: 0 auto 0 auto;
+    text-align: center;
+    background-color: #ffc800;
+    border-radius: 1rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    font-size: 1.43rem;
+    color: white;
+}
+
+.rules{
+    margin-top: 1.1rem;
+    padding: 0 1.8rem 0 1.8rem;
+    color: #807f7a;
+}
+
+#url{
+    width: 0;
+    height: 0;
+    display: none;
+}

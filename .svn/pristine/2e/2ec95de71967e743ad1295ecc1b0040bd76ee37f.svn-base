@@ -1,0 +1,42 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 用户消费记录
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateConsumeLogsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('consume_logs', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('order_info_id')->index();// 对应的订单
+            $table->integer('order_product_id')->index();// 对应的订单中的产品
+            $table->integer('consumer_id')->index();// 对应消费的消费者
+            $table->integer('supplier_id')->index();// 对应消费的门店
+            $table->integer('barber_id')->index();// 对应消费的理发师
+            $table->timestamp('created_at');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('consume_logs');
+    }
+}

@@ -1,0 +1,45 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 门店数据统计缓存表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateSupplierCachesTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('supplier_caches', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('supplier_id')->index();// 门店id
+            $table->text('reviews');// 评论相关的集合，序列化
+            $table->tinyInteger('avg_score')->default(0);// 评论的综合得分
+            $table->integer('lower_price')->default(0);// 门店的最低价格,单位为分
+            $table->text('hot_product_ids');// 热门的商品设置,序列化
+            $table->tinyInteger('busy_index')->default(0);// 忙碌指数
+            $table->smallInteger('followers')->default(0);// 关注者数量
+            $table->text('count');// 关注者数量
+            $table->text('tags');// 评价相关的标签统计
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('supplier_caches');
+    }
+}

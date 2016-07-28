@@ -1,0 +1,53 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 店家信息表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateSuppliersTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('suppliers', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('supplier_manager_id')->default(0)->index();// 管理员主键
+            $table->string('account', 32)->unique();// 用来登陆的账号
+            $table->char('mobile', 11)->unique();// 手机号
+            $table->string('password', 60);// 密码
+            $table->string('name', 32);// 店铺名称
+            $table->smallInteger('staff_count')->default(1);// 员工数量
+            $table->text('business_time');// 营业时间，存json
+            $table->text('phones');// 商家电话，存josn
+            $table->text('gallerys');// 展示图片，存json
+            $table->string('legal_name', 10);// 法人姓名
+            $table->char('id_num', 18);// 法人身份证号码
+            $table->text('id_photos');// 身份证图片
+            $table->string('license_photo', 32);// 营业执照
+            $table->tinyInteger('basic_discount')->default(10);// 基本折扣
+            $table->tinyInteger('status')->default(5);// 店铺状态，0：关闭， 1：合作营业店，2：未合作营业店， 3：不接单休息中，4：申请店铺
+            $table->enum('is_first', ['1', '0'])->default(1);//是否首次登陆，1:首次登陆，0：不是首次登陆
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('suppliers');
+    }
+}

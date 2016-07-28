@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 消费者的优惠券
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateConsumerCouponsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('consumer_coupons', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('consumer_id')->index();// 用户id
+            $table->integer('coupon_id');// 优惠券id
+            $table->enum('status', [0, 1, 2])->default(0);// 优惠券状态,0:未使用，1：已使用，2：已过期
+            $table->integer('deadline');// 优惠券到期时间
+            $table->timestamp('created_at');// 优惠券获得时间
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('consumer_coupons');
+    }
+}

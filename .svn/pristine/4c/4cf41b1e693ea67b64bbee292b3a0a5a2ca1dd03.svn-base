@@ -1,0 +1,950 @@
+<?php
+
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Api\ApiBaseController;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\OrderService;
+use Validator;
+use App\Libary\Contracts\Http\ResponseInterface;
+use App\Salon\Services\ConsumerService;
+use Qiniu\json_decode;
+use App\Salon\ConsumerCoupon;
+use App\Salon\Services\CouponService;
+use App\Salon\Services\ProductService;
+use App\Events\CouponUsedEvent;
+use Illuminate\Http\Request;
+use Cache;
+use Illuminate\Support\Str;
+use App\Salon\Services\SupplierService;
+use App\Salon\Services\LoginService;
+use App\Salon\Repositories\OrderInfoRepository;
+use App\Salon\OrderInfo;
+use App\Events\OrderFreeEvent;
+use App\Events\ConsumerOrderEvent;
+use App\Events\CouponExpireEvent;
+use App\Salon\Consumer;
+use App\Salon\OrderProduct;
+use App\Salon\BarberProduct;
+use App\Salon\ProductCategory;
+use App\Salon\Product;
+/**
+ * 
+ * 
+ * @desc 请描述这个类的功能
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月6日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Order",
+ *  description="用户下订单的操作",
+ *  produces="['application/json']"
+ * )
+ */
+class OrderController extends ApiBaseController
+{
+    /**
+     * 订单的服务层
+     * @var OrderService
+     */
+    protected $orderSer;
+    
+    /**
+     * 消费者服务层
+     * @var ConsumerService
+     */
+    protected $consumerSer;
+    
+    /**
+     * 优惠券服务层
+     * @var CouponService
+     */
+    protected $couponSer;
+    
+    /**
+     * 产品的服务层
+     * @var ProductService
+     */
+    protected $productSer;
+    
+    /**
+     * 门店服务层
+     * @var SupplierService
+     */
+    protected $supplierSer;
+    
+    /**
+     * The LoginService instance.
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            OrderService $orderSer,
+            ConsumerService $consumerSer,
+            CouponService $couponSer,
+            ProductService $productSer,
+            SupplierService $supplierSer,
+            LoginService $loginSer
+    ){
+        parent::__construct($aes);
+        $this->orderSer = $orderSer;
+        $this->consumerSer = $consumerSer;
+        $this->couponSer = $couponSer;
+        $this->productSer = $productSer;
+        $this->supplierSer = $supplierSer;
+        $this->loginSer = $loginSer;
+        //$this->middleware('req');
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/orders/{consumer_id}/to_buy",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="用户下订单",
+     *      notes="此处直接加密json字符串，不使用key1=val1&key2=val2的形势。(原因：一个订单中可能有多个产品，只有json才能满足需求)",
+     *      type="void",
+     *      nickname="to_pay",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="消费者id",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="提交的加密订单信息,aes(订单json数据, token)",
+     *          required=true,
+     *          type="BuyOrder",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="JxwCYWKPUZqDFKnutoA8T5HEApAd7zj4x+8S9PU2X+qxIcjt5B1FMAz8XxMN9eTjptnnRTyLNRDq4TagCSiTNi8QQ2j6zQsXbS02675vuIsF5eV7IJdXEhJr1jphxIm0pPeOKLDJ8TCa0wMpnrR1TLdAv/HRjBlus7x/6YbH1cy6SSK2a75LHGbP3lhZQCteCZAcbOZLvkp8h+6WWbZH/sxPOwIrQsTbHpMWdpfEV96BV6yuc5XBdM9o9RM2ed3PcQ1m1ps0HBuFTdGFDwU6WkAvF0yNG2du2G10kkxL12XYTCmc26rceXNvOG/QKdqSktrSygbhwhQHODwS8fj+rGu0A7xf1RoSUV8UABB+Sd+jHuRS+Ta/t2IommPgi6ij/lrmBPh/9bIgDaQqBob7aT8TZMsQlMyAWkQ/DCl25s+XjItHiPLMwMtoA2/w+StRmDarnbHgF0rTbBqQWS2ReQ=="
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="订单生成成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户未登陆或无权限调用该接口"),
+     *      @SWG\ResponseMessage(code=403, message="提交购买的产品非法"),
+     *      @SWG\ResponseMessage(code=415, message="用户使用的优惠券已过期"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证未通过")
+     *  )
+     * )
+     */
+    public function store($consumer_id)
+    {
+        // 检查是否登陆
+        $this->isLogin($consumer_id, LoginService::USER_TYPE_CONSUMER);
+        $cacheValue = $this->loginSer->getUserCache($consumer_id, LoginService::USER_TYPE_CONSUMER);
+        
+        $inputs = json_decode($this->decodeAppData(bodys('json', 'data'), $cacheValue['token']), true);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '加密数据不能解析'
+            ));
+        }
+        $inputs['consumer_id'] = $consumer_id;
+        // 检查订单数据
+        $validator = Validator::make($inputs, [
+                'postscript' => 'required',
+                'consumer_coupon_id' => 'required|integer',
+                'is_user_bean' => 'required|integer|in:0,1',
+                'advance_time' => 'required',
+                'consumer_mobile' => 'required|mobile',
+                'consumer_id' => 'required|integer',
+                'products' => 'required|array',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查产品能否购买
+        foreach ($inputs['products'] as $key=>$val) {
+            if (!$this->orderSer->isBusiness($val['supplier_id'])) {
+                exit($this->appResp->buildReplyMsg(
+                        ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                        '该门店未营业'
+                ));
+            }
+            if ($val['product_id'] == 0) {// 如果门店产品等于0，则检查其理发师id与理发师产品
+                if ($val['barber_id']==0 || $val['barber_product_id'] ==0) {
+                    exit($this->appResp->buildReplyMsg(
+                            ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                            '理发师与门店产品必须存在且仅存在一个'
+                    ));
+                }
+            } else {
+                if ($val['barber_id']!=0 || $val['barber_product_id'] !=0) {
+                    exit($this->appResp->buildReplyMsg(
+                            ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                            '理发师与门店产品必须存在且仅存在一个'
+                    ));
+                }
+            }
+            
+            $type = $this->productSer->checkProductStatus($val, $consumer_id);
+            if (true!==$type) {#产品不能购买
+                exit($this->appResp->buildReplyMsg(
+                        ResponseInterface::HTTP_FORBIDDEN,
+                        $this->productSer->getProductStatusText($type)
+                ));
+            }
+        }
+        // 检查优惠券状态
+        $inputs['coupon_face_fee'] = 0;
+        if ($inputs['consumer_coupon_id'] != 0) {
+            $consumerCoupon = $this->couponSer->getSignCoupon($inputs['consumer_coupon_id'], $inputs['products']);
+            if (is_numeric($consumerCoupon)) {
+                exit($this->appResp->buildReplyMsg(
+                        ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                        $this->couponSer->getCouponStatusText($consumerCoupon)
+                ));
+            }
+            // 获取优惠券面额
+            $inputs['coupon_face_fee'] = $consumerCoupon->coupon->face_fee;
+        }
+
+        // 计算产品未优惠的价格
+        $price = $this->orderSer->reckonCostPrice($inputs['products']);
+        // 检查产品能够使用选择的优惠券
+        if ($inputs['consumer_coupon_id'] != 0) {
+            $type = $this->couponSer->checkCouponAuth($price['pay_fee'], $consumerCoupon->coupon);
+            if ($type!==true) {
+                exit($this->appResp->buildReplyMsg(
+                        ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                        $this->couponSer->getCouponFaildText($type)
+                ));
+            }
+        }
+
+        // 计算优惠价格
+        $info = $this->orderSer->reckonDiscountPrice(
+                $consumer_id,
+                $price['pay_fee'],
+                $inputs['coupon_face_fee'],
+                $inputs['is_user_bean']
+        );
+        $inputs['bean_amount'] = $info->bean_amount;
+        $inputs['bean_fee'] = $info->bean_fee;
+        $inputs['pay_fee'] = $info->pay_fee;
+        $inputs['consumer_name'] = $info->nickname;
+        $inputs['consumer_head'] = $info->head_img;
+        $inputs['original_fee'] = $price['original_fee'];
+        $inputs['total_sign_fee'] = $price['total_sign_fee'];
+
+        // 检查是否是0元订单
+        if ($info->pay_fee == 0) {
+            $inputs['pay_status'] = 1;
+        }
+        
+        // 添加订单
+        $order = $this->orderSer->addOrder($inputs);
+        $nowOrder = $this->orderSer->getSignInfo($consumer_id, $order->id);
+        if (is_null($order)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '不确定添加操作是否成功'
+            ));
+        }
+        
+        // 如果是0元订单，触发该事件
+        if ($info->pay_fee == 0) {
+            event(new OrderFreeEvent($order->id));
+        }
+        
+        // 触发下单统计事件，下了一个单
+        event(new ConsumerOrderEvent($order, 1));
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_CREATED,
+                '订单添加成功',
+                $this->encodeAppData($nowOrder->toJson(), $cacheValue['token'])
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/orders/{user_id}/list_order",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取订单列表",
+     *      notes="需要用户登录，此处修改为，user_id不需要加密，返回的数据使用用户的token加密。",
+     *      type="OrderInfo",
+     *      nickname="all_list",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_type",
+     *          description="用户身份类型：consumer:消费者 supplier:门店 barber:理发师",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="consumer",
+     *          enum="['consumer','supplier','barber']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_id",
+     *          description="用户id",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="order_type",
+     *          description="订单的类别,0:所有,1:取消,2:未支付,3:未消费,4:待评价,5:已评价,6:退款(7:退款中,8:已退款,9:退款失败)",
+     *          required=true,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="0",
+     *          enum="['0','1','2','3','4','5','6']"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取成功"),
+     *      @SWG\ResponseMessage(code=404, message="获取的数据不存在或没有更多"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function index(Request $request, $user_id)
+    {
+        $inputs = $request->only(['per_page', 'page', 'order_type', 'user_type']);
+        
+        $inputs['user_id'] = $user_id;
+        $inputs['user_type'] = strtolower($inputs['user_type']);
+
+        $validator = Validator::make($inputs, [
+                'per_page' => 'integer',
+                'user_id' => 'required|integer',
+                'user_type' => 'required|string|in:consumer,supplier,barber',
+                'page' => 'integer',
+                'order_type' => 'required|integer|in:0,1,2,3,4,5,6',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($user_id, $inputs['user_type']);
+        $cacheValue = $this->loginSer->getUserCache($user_id, $inputs['user_type']);
+        
+        if (Str::equals('consumer', $inputs['user_type'])) {
+            $where['consumer_id'] = $user_id;
+        } elseif (Str::equals('supplier', $inputs['user_type'])) {
+            $where['supplier_id'] = $user_id;
+        } elseif (Str::equals('barber', $inputs['user_type'])) {
+            $where['barber_id'] = $user_id;
+        }
+
+        $list = $this->orderSer->listOrders($where, $inputs['order_type'], $inputs['per_page']);
+        if (is_null($list)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '数据不存在或没有更多'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $this->encodeAppData($list->toJson(), $cacheValue['token'])
+        ));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/orders",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="删除未支付的订单或已取消的订单",
+     *      notes="需要用户登录，并且用户id与订单id需要aes加密，使用初始化接口的app_key",
+     *      type="void",
+     *      nickname="del_order",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_type",
+     *          description="调用该接口的用户类型，删除分为：门店删除、用户删除",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="supplier",
+     *          enum="['supplier','consumer']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="请使用aes加密:consumer_id=xxx&order_ids=1,2,3...",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="E1/WNXI/3ePaAmwvqg5SSBLbnfu7OMDQmCRzday9oq/Rud+sj06U7qEJW104CKOg"
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="删除操作成功"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证失败"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function destroy(Request $request, OrderInfoRepository $orderInfoRe)
+    {
+        $inputs = $this->decodeAppData(bodys('json', 'data'));
+        
+        $inputs['user_type'] = strtolower($request->input('user_type'));
+        $inputs['order_ids'] = explode(',', $inputs['order_ids']);
+        $validator = Validator::make($inputs, [
+                'order_ids' => 'required|array',
+                'consumer_id' => 'required|integer',
+                'user_type' => 'required|in:supplier,consumer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($inputs['consumer_id'], $inputs['user_type']);
+
+        // 检查订单权限
+        foreach ($inputs['order_ids'] as $key=>$id) {
+            $orderInfo = $orderInfoRe->show(['id'=>$id, 'consumer_id'=>$inputs['consumer_id']]);
+            $flag = $this->orderSer->getOrderStatus($orderInfo);
+            if ($flag!=0 && $flag!=1 && $flag!=2) {
+                exit($this->appResp->buildReplyMsg(
+                        ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                        $this->orderSer->getOrderStatusTxt($flag)
+                ));
+            }
+        }
+
+        // 执行删除操作
+        if ($inputs['user_type'] == 'supplier') {
+            $status = OrderInfo::ORDER_STATUS_DEL_SUPPLIER;
+        } else {
+            $status = OrderInfo::ORDER_STATUS_DEL_CONSUMER;
+        }
+        
+        $flag = OrderInfo::whereIn('id', $inputs['order_ids'])->update(['order_status'=>$status]);
+        if ($flag < 1) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务器异常，操作不确定是否成功'
+            ));
+        }
+        
+        // 触发订单统计事件
+        $ids = $inputs['order_ids'];
+        foreach ($ids as $key => $id) {
+            $order = $orderInfoRe->show(['id'=>$id]);
+            if (! is_null($order)) {
+                // 取消后，退换积分与优惠券
+                $this->retUserBeanAndCoupon($order);
+            }
+            
+            $order->product = $order->orderProducts()->first();
+            event(new ConsumerOrderEvent($order, -1));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_NO_CONTENT,
+                '操作成功'
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/orders/{order_id}",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="取消未支付的订单",
+     *      notes="需要用户登录，并且用户id需要aes加密，使用初始化接口的app_key",
+     *      type="void",
+     *      nickname="cancel_order",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="order_id",
+     *          description="订单id",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="请使用aes加密:consumer_id=xxx",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="E1/WNXI/3ePaAmwvqg5SSLtfUS/jqY6rGDWacCLdIvo="
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="删除操作成功"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证失败"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function cancel(OrderInfoRepository $orderInfoRe, $order_id)
+    {
+        $inputs = $this->decodeAppData(bodys('json', 'data'));
+        $inputs['order_id'] = $order_id;
+        $validator = Validator::make($inputs, [
+                'order_id' => 'required|integer',
+                'consumer_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($inputs['consumer_id'], LoginService::USER_TYPE_CONSUMER);
+
+        // 检查订单状态
+        $orderInfo = $orderInfoRe->show(['id'=>$order_id, 'consumer_id'=>$inputs['consumer_id']]);
+        $flag = $this->orderSer->getOrderStatus($orderInfo);
+        if ($flag != 0 && $flag != 2) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    $this->orderSer->getOrderStatusTxt($flag)
+            ));
+        }
+        
+        // 执行取消操作
+        $flag = $orderInfoRe->update(['id'=>$order_id], ['order_status'=>OrderInfo::ORDER_STATUS_CANCEL]);
+        if (!$flag) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务器异常'
+            ));
+        }
+        
+        // 取消后，退换积分与优惠券
+        $this->retUserBeanAndCoupon($orderInfo);
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NO_CONTENT, '操作成功'));
+    }
+    
+    /**
+     * 当用户删除或者取消订单时，退换用户的优惠券与积分(如果使用了)
+     * 
+     * @param OrderInfo $orderInfo 订单的信息
+     */
+    private function retUserBeanAndCoupon(OrderInfo $orderInfo)
+    {
+        // 退回用户使用的积分与优惠券
+        $bean = $orderInfo->bean_amount;
+        $coupon_id = $orderInfo->consumer_coupon_id;
+        
+        if ($bean!=0 || $coupon_id!=0) {
+            $consumer = Consumer::where('id', $orderInfo->consumer_id)->first();
+            
+            if ($bean != 0) {// 积分不为0
+                $consumer->my_bean += $bean;
+            }
+            if ($coupon_id != 0) {// 优惠券存在
+                // 更新优惠券状态
+                ConsumerCoupon::where('id', $orderInfo->consumer_coupon_id)->update(['status'=>ConsumerCoupon::COUPON_STATUS_NOT_USE]);
+                $consumer->my_coupon += 1;
+            }
+            $consumer->save();
+        }
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/orders/{order_id}",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取某一个订单的详细信息",
+     *      notes="1:取消,2:未支付,3:未消费,4:待评价,5:已评价,6:退款(7:退款中,8:已退款,9:退款失败)",
+     *      type="void",
+     *      nickname="order_sign",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="order_id",
+     *          description="订单的id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_id",
+     *          description="请使用aes加密:aes(user_id=xxx, app_key)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="E1/WNXI/3ePaAmwvqg5SSLtfUS/jqY6rGDWacCLdIvo="
+     *      ),
+     *      @SWG\Parameter(
+     *          name="user_type",
+     *          description="用户的类型,consumer:用户,supplier:门店,barber:理发师",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple="consumer",
+     *          enum="['consumer','supplier','barber']"
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="获取数据成功"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证失败"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function show(Request $request, $order_id)
+    {
+        $inputs = $this->decodeAppData($request->input('user_id'));
+        $inputs['order_id'] = $order_id;
+        $inputs['user_type'] = $request->input('user_type');
+        $validator = Validator::make($inputs, [
+                'order_id' => 'required|integer',
+                'user_id' => 'required|integer',
+                'user_type' => 'required|in:consumer,supplier,barber',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($inputs['user_id'], $inputs['user_type']);
+        $cacheValue = $this->loginSer->getUserCache($inputs['user_id'], $inputs['user_type']);
+        
+        // 获取订单信息
+        $obj = $this->orderSer->getSignInfo($inputs['user_id'], $inputs['order_id'], $inputs['user_type']);
+        if (is_null($obj)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '获取的数据不存在'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $this->encodeAppData($obj->toJson(), $cacheValue['token'])
+        ));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/orders/{consumer_id}/{product_id}/{type}",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="订单立即预约时，检查项目是否能够购买",
+     *      notes="无",
+     *      type="void",
+     *      nickname="appointment",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="用户id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="product_id",
+     *          description="购买的产品id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="type",
+     *          description="购买类型,supplier:门店,barber:理发师",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple="supplier",
+     *          enum="['supplier','barber']"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="能够购买"),
+     *      @SWG\ResponseMessage(code=404, message="未找到该产品"),
+     *      @SWG\ResponseMessage(code=422, message="不能购买,原因将返回的msg")
+     *  )
+     * )
+     */
+    public function appointment($consumer_id, $product_id, $type)
+    {
+        // 检查是否登陆
+        $this->isLogin($consumer_id, 'consumer');
+        
+        $inputs['consumer_id'] = $consumer_id;
+        $inputs['product_id'] = $product_id;
+        $inputs['type'] = $type;
+        $validator = Validator::make($inputs, [
+                'consumer_id' => 'required|integer',
+                'product_id' => 'required|integer',
+                'type' => 'required|in:supplier,barber',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        if (Str::equals('supplier', $type)) {
+            $product = Product::where('id', $product_id)->first();
+        } else {
+            $product = BarberProduct::where('id', $product_id)->first();
+        }
+        if (is_null($product)) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NOT_FOUND, '商品不存在'));
+        }
+        
+        if ($product->total_stock == -1) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_FORBIDDEN,
+                    '该产品库存不足！'
+            ));
+        }
+
+        #如果该商品是活动商品，则检查用户是否享受过
+        if ($product->category_id == config('appinit.active_category')) {
+            $flag = $this->orderSer->limitPurchase($consumer_id, $product->category_id);
+            if (! $flag) {
+                exit($this->appResp->buildReplyMsg(
+                        ResponseInterface::HTTP_FORBIDDEN,
+                        '活动产品，每位用户只能享受一次'
+                ));
+            }
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '能够购买'
+        ));
+    }
+}

@@ -1,0 +1,45 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 提现的日志表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateWithdrawCashLogsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('withdraw_cash_logs', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('supplier_id')->index();// 提现的主体，
+            $table->integer('fund_account_id')->index();// 对应的账号id
+            $table->integer('cash_fee');// 提取的总金额，单位为分
+            $table->integer('pay_fee');// 用户实际支付的金额
+            $table->string('user_name', 20);// 对应账户的名称
+            $table->string('card_number', 32);// 对应的卡号
+            $table->string('pay_code', 12);// 对应的提取方式code
+            $table->enum('is_verify', [0, 1, 2])->default(0);//审核状态，0：审核中； 1：审核成功； 2：审核失败
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('withdraw_cash_logs');
+    }
+}

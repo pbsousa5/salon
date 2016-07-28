@@ -1,0 +1,43 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 用户意见反馈
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateFeedbacksTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('feedbacks', function(Blueprint $table){
+            $table->increments('id');
+            $table->char('mobile', 11)->index();// 手机号码
+            $table->enum('source', ['weixin', 'android', 'ios', 'other']);// 来源
+            $table->enum('user_type', ['consumer', 'supplier', 'barber', 'other']);// 提交反馈意见的用户类型
+            $table->string('feedback_txt', 512);// 反馈的内容
+            $table->text('feedback_imgs')->nullable();// 反馈的图片
+            $table->enum('status', [0, 1])->default(0);// 该信息状态，0：未查看，1：已查看
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('feedbacks');
+    }
+}

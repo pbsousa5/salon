@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Salon\Repositories\V2;
+
+use App\Salon\BarberSample;
+use App\Salon\Repositories\BarberSampleRepository as BarberSampleRep;
+/**
+ *
+ *
+ *
+ * @desc 理发师作品集数据仓库
+ * @author fengdq <fengdq@bnersoft.com>
+ * @date 2015年11月12日
+ */
+class BarberSampleRepository extends BarberSampleRep
+{
+    /**
+     *
+     * 创建一个理发师作品集数据仓库实例
+     * @param App\Salon\BarberSample $barbersample
+     * @return void
+     */
+    public function __construct(BarberSample $barberSample)
+    {
+        $this->model = $barberSample;
+    }
+
+    /**
+     * 更新或创建理发师作品集
+     * @param BarberSample $barberSample 理发师作品集model
+     * @param array $inputs 更新的数据
+     * @return BarberSample|null
+     */
+    protected function saveBarberSample(BarberSample $barberSample, array $inputs)
+    {
+        if (array_key_exists('barber_id', $inputs)) {
+            $barberSample->barber_id = $inputs['barber_id'];
+        }
+        if (array_key_exists('opus_img', $inputs)) {
+            $barberSample->opus_img = serialize($inputs['opus_img']);
+        }
+        if (array_key_exists('small_title', $inputs)) {
+            $barberSample->small_title = e(trim($inputs['small_title']));
+        }
+        if (array_key_exists('describe', $inputs)) {
+            $barberSample->describe = e(trim($inputs['describe']));
+        }
+        if (array_key_exists('created_at', $inputs)) {
+            $barberSample->created_at = $inputs['created_at'];
+        }
+        if (array_key_exists('updated_at', $inputs)) {
+            $barberSample->updated_at = $inputs['updated_at'];
+        }
+        
+        if ($barberSample->save()) {
+            return $barberSample;
+        }
+        
+        return null;
+    }    
+}

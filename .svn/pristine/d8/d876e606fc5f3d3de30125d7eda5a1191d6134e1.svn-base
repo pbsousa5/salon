@@ -1,0 +1,201 @@
+<?php
+
+namespace App\Salon\Repositories;
+
+use App\Salon\Contracts\Repositories\ProductRepositoryInterface;
+use App\Salon\Product;
+use Illuminate\Support\Str;
+use DB;
+
+/**
+ * 
+ * 
+ * @desc 产品数据仓库实现
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月29日
+ */
+class ProductRepository extends BaseRepository implements ProductRepositoryInterface
+{
+    /**
+     * 
+     * 创建一个产品数据仓库实例
+     * @param App\Salon\Product $product
+     * @return void
+     */
+    public function __construct(Product $product)
+    {
+        $this->model = $product;
+    }
+    
+    /**
+     * 获取资源列表
+     *
+     * @param  array $data 必须传入与模型查询相关的数据
+     * @param  array $order 排序字段
+     * @param  string $size 分页大小（存在默认值）
+     * @return Illuminate\Support\Collection
+     */
+    public function index($data, $order=[], $size=10)
+    {
+        if (empty($order)) {
+            $order = ['updated_at'=>'desc'];
+        }
+        $query = $this->createModel()->newQuery();
+        list($sort_by, $order_by) = each($order);
+        
+        $query->with('category');
+        if (array_key_exists('status', $data)) {
+            $query->whereIn('status', $data['status']);
+            $data = array_remove_keys($data, ['status']);
+        }
+        
+        foreach ($data as $field=>$value) {
+            if (array_key_exists('ids', $data)) {
+                $query->whereIn('id', $data['ids']);
+                continue;
+            }
+            
+            $query->where($field, $value);
+        }
+        
+        $list = $query->orderBy(DB::raw("(SELECT sort_num FROM product_categorys WHERE products.category_id = product_categorys.id),GREATEST(`sell_price`,`sign_price`)"), 'asc')->get();
+        
+        return $list;
+    }
+    
+    /**
+     * 存储资源
+     *
+     * @param  array $inputs 必须传入与存储模型相关的数据
+     * @param  string|array $extra 可选额外传入的参数
+     * @return Illuminate\Database\Eloquent\Model
+     */
+    public function store($inputs, $extra='')
+    {
+        $data = [];
+        if (array_key_exists('supplier_id', $inputs)) {
+            $data['supplier_id'] = trim($inputs['supplier_id']);
+        }
+        if (array_key_exists('category_id', $inputs)) {
+            $data['category_id'] = trim($inputs['category_id']);
+        }
+        if (array_key_exists('product_name', $inputs)) {
+            $data['product_name'] = e(trim($inputs['product_name']));
+        }
+        if (array_key_exists('product_desc', $inputs)) {
+            $data['product_desc'] = e(trim($inputs['product_desc']));
+        }
+        if (array_key_exists('sell_price', $inputs)) {
+            $data['sell_price'] = trim($inputs['sell_price']);
+        }
+        if (array_key_exists('original_price', $inputs)) {
+            $data['original_price'] = trim($inputs['original_price']);
+        }
+        if (array_key_exists('total_stock', $inputs)) {
+            $data['total_stock'] = trim($inputs['total_stock']);
+        }
+        if (array_key_exists('quota_num', $inputs)) {
+            $data['quota_num'] = trim($inputs['quota_num']);
+        }
+        if (array_key_exists('status', $inputs)) {
+            $data['status'] = trim($inputs['status']);
+        }
+        if (array_key_exists('sold_type', $inputs)) {
+            $data['sold_type'] = trim($inputs['sold_type']);
+        }
+        if (isset($inputs['sold_type']) && $inputs['sold_type']==1 && array_key_exists('start_sold_time', $inputs)) {
+            $data['start_sold_time'] = trim($inputs['start_sold_time']);
+        }
+        if (array_key_exists('rich_desc', $inputs)) {
+            $data['rich_desc'] = trim($inputs['rich_desc']);
+        }
+        if (array_key_exists('is_real', $inputs)) {
+            $data['is_real'] = trim($inputs['is_real']);
+        }
+        
+        return $this->model->create($data);
+    }
+    
+    /**
+     * 获取指定资源
+     *
+     * @param array $where 查询条件
+     * @param array $extra 可选额外传入的参数
+     * @return Illuminate\Database\Eloquent\Model
+     */
+    public function show($where, $extra=[])
+    {
+        $query = $this->createModel()->newQuery();
+        
+        $query->with('category', 'supplier');
+        foreach ($where as $field => $value) {
+            $query->where($field, $value);
+        }
+        $query->where('is_delete', 0)->whereIn('status', [0, 1]);
+        
+        return $query->first();
+    }
+    
+    /**
+     * 更新特定id资源
+     *
+     * @param  int $id 资源id
+     * @param  array $inputs 必须传入与更新模型相关的数据
+     * @param  string|array $extra 可选额外传入的参数
+     * @return void
+    */
+    public function update($id, $inputs, $extra='')
+    {
+        $product = $this->getById($id);
+        // 如果设置了门店id，则检查是否是该门店的产品
+        if (array_key_exists('supplier_id', $extra)) {
+            if ($product->supplier_id != $extra['supplier_id']) {
+                return null;
+            }
+        }
+        
+        if (array_key_exists('supplier_id', $inputs)) {
+            $product->supplier_id = trim($inputs['supplier_id']);
+        }
+        if (array_key_exists('category_id', $inputs)) {
+            $product->category_id = trim($inputs['category_id']);
+        }
+        if (array_key_exists('product_name', $inputs)) {
+            $product->product_name = e(trim($inputs['product_name']));
+        }
+        if (array_key_exists('product_desc', $inputs)) {
+            $product->product_desc = e(trim($inputs['product_desc']));
+        }
+        if (array_key_exists('sell_price', $inputs)) {
+            $product->sell_price = trim($inputs['sell_price']);
+        }
+        if (array_key_exists('original_price', $inputs)) {
+            $product->original_price = trim($inputs['original_price']);
+        }
+        if (array_key_exists('total_stock', $inputs)) {
+            $product->total_stock = trim($inputs['total_stock']);
+        }
+        if (array_key_exists('quota_num', $inputs)) {
+            $product->quota_num = trim($inputs['quota_num']);
+        }
+        if (array_key_exists('status', $inputs)) {
+            $product->status = trim($inputs['status']);
+        }
+        if (array_key_exists('sold_type', $inputs)) {
+            $product->sold_type = trim($inputs['sold_type']);
+        }
+        if (isset($inputs['sold_type']) && $inputs['sold_type']==1 && array_key_exists('start_sold_time', $inputs)) {
+            $product->start_sold_time = trim($inputs['start_sold_time']);
+        }
+        if (array_key_exists('rich_desc', $inputs)) {
+            $product->rich_desc = trim($inputs['rich_desc']);
+        }
+        if (array_key_exists('is_real', $inputs)) {
+            $product->is_real = trim($inputs['is_real']);
+        }
+        
+        $product->save();
+        return $product;
+    }
+    
+}

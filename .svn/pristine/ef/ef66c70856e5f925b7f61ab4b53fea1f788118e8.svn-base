@@ -1,0 +1,264 @@
+<?php
+
+namespace App\Salon\Services;
+
+use App\Salon\Repositories\ProductRepository;
+use App\Salon\Repositories\BarberProductRepository;
+use Illuminate\Support\Str;
+use App\Salon\Repositories\OrderProductRepository;
+use App\Salon\ProductCategory;
+use App\Salon\Repositories\ProductCategoryRepository;
+use App\Salon\OrderProduct;
+use App\Salon\OrderInfo;
+
+/**
+ * 
+ * 
+ * @desc 产品服务
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月28日
+ */
+class ProductService
+{
+    
+    /**
+     * 产品数据仓库
+     * @var ProductRepository
+     */
+    protected $productRe;
+    
+    /**
+     * The BarberProductRepository instance.
+     * @var BarberProductRepository
+     */
+    protected $barberProductRe;
+    
+    /**
+     * The ProductCategoryRepository instance.
+     * @var ProductCategoryRepository
+     */
+    protected $categoryRe;
+    
+    /**
+     * The OrderService instance.
+     * @var OrderService
+     */
+    protected $orderSer;
+    
+    public function __construct(
+            ProductRepository $repository,
+            BarberProductRepository $barberProductRe,
+            ProductCategoryRepository $categoryRe,
+            OrderService $orderSer
+    ){
+        $this->productRe = $repository;
+        $this->barberProductRe = $barberProductRe;
+        $this->categoryRe = $categoryRe;
+        $this->orderSer = $orderSer;
+    }
+    
+    /**
+     * 获取门店产品列表
+     * @param integer $user_id 根据门店id获取产品列表
+     * @param string $category_type 获取的分类数据
+     * @param string $user_type 获取的用户类型，supplier barber
+     * @param integer $size 获取几条数据
+     * @return Illuminate\Support\Collection
+     */
+    public function listProductByUserId($user_id, $user_type, $category_type='', $size=10)
+    {
+        $where['status'] = [0, 1];
+        $where['is_delete'] = 0;
+        if ($category_type != '') {
+            $where['category_id'] = $category_type;
+        }
+        
+        if (Str::equals('supplier', $user_type)) {
+            $where['supplier_id'] = $user_id;
+            $list = $this->productRe->index($where, ['category_id'=>'asc'], $size);
+        } elseif (Str::equals('barber', $user_type)) {
+            $where['barber_id'] = $user_id;
+            $list = $this->barberProductRe->index($where, ['category_id'=>'asc'], $size);
+        } else {
+            return collect();
+        }
+
+        foreach ($list as $key=>$val) {
+            $list[$key] = $this->handleData($val, $user_type);
+        }
+        
+        return $list;
+    }
+    
+    /**
+     * 处理获取的产品集合
+     * @param Illuminate\Database\Eloquent\Model $model 某个产品model
+     * @return Illuminate\Database\Eloquent\Collection
+     */
+    protected function handleData($product, $user_type)
+    {
+        if (is_null($product)) {
+            return null;
+        }
+        
+        if ($product->rich_desc != '') {
+            $product->url = config('appinit.apiurl')."v1/products/{$product->id}/intro?user_type={$user_type}";
+        } else {
+            $product->url = '';
+        }
+        
+        $product->sell_price = max($product->sell_price, $product->sign_price);#比价平台售价与签约价，取较大值让用户进行支付
+        
+        unset($product->sign_price);
+        unset($product->category_id);
+        unset($product->rich_desc);
+        unset($product->is_delete);
+        
+        return $product;
+    }
+    
+    /**
+     * 根据id获取产品model
+     * @param integer $id 产品id
+     * @param array $fields 需要获取的字段
+     * @param string $user_type 用户类型 supplier barber
+     * @return  Illuminate\Database\Eloquent\Model
+     */
+    public function getModelById($id, $user_type='supplier', $fields=[])
+    {
+        switch ($user_type) {
+            case 'supplier':
+                $product = $this->productRe->show(['id'=>$id], $fields);
+                break;
+            case 'barber':
+                $product = $this->barberProductRe->show(['id'=>$id], $fields);
+                break;
+            default:
+                return null;
+                break;
+        }
+
+        if (empty($fields)) {
+            return $this->handleData($product, $user_type);
+        } else {
+            return $product;
+        }
+    }
+    
+    /**
+     * 根据id获取产品model (不判断产品是否被删除)
+     * @param integer $id 产品id
+     * @return  Illuminate\Database\Eloquent\Model
+     */
+    public function getProduct($product_id)
+    {
+        return $this->productRe->getById($product_id);
+    }
+    
+    /**
+     * 根据产品id获取产品状态，检测其能否被购买
+     * 
+     * @param array $inputs [product_id, good_number]
+     * @param int $consumer_id 用户id
+     * @return  integer
+     */
+    public function checkProductStatus(array $inputs, $consumer_id)
+    {
+        if (array_key_exists('product_id', $inputs) && $inputs['product_id']!=0) {
+            $product = $this->productRe->show([
+                    'id'=>$inputs['product_id'],
+                    'supplier_id'=>$inputs['supplier_id']
+            ]);
+        } else {
+            $product = $this->barberProductRe->show([
+                    'id'=>$inputs['barber_product_id'],
+                    'barber_id'=>$inputs['barber_id'],
+                    'supplier_id'=>$inputs['supplier_id']
+            ]);
+        }
+        
+        // 检查是否属于限购
+        if ($product->category_id == config('appinit.active_category')) {#如果该商品是活动商品，则检查用户是否享受过
+            $flag = $this->orderSer->limitPurchase($consumer_id, $product->category_id);
+            if (! $flag) {
+                return 6;
+            }
+        }
+        
+        if (is_null($product)) {
+            return -1;
+        }
+        
+        if ($product->status!=1) {#产品下架或售罄
+            return 1;
+        }
+        if ($product->total_stock==-1) {#没有库存
+            return 2;
+        }
+        if ($product->quota_num!=0 && $inputs['good_number']>$product->quota_num) {#超过限制购买的数量
+            return 3;
+        }
+        if ($product->sold_type==1 && $product->start_sold_time>time()) {#还未到购买时间
+            return 4;
+        }
+        if ($product->is_delete==1) {#产品已被删除
+            return 5;
+        }
+        
+        return true;
+    }
+    /**
+     * 获取产品的状态文本信息
+     * 
+     */
+    public function getProductStatusText($type)
+    {
+        switch ($type) {
+            case 1:
+                return '产品已售罄';
+                // no break;
+            case 2:
+                return '该产品没有库存了';
+                // no break;
+            case 3:
+                return '该产品限制购买数量';
+                // no break;
+            case 4:
+                return '该产品销售时间还未到';
+                // no break;
+            case 5:
+                return '产品已被商家删除';
+                // no break;
+            case 6:
+                return '该活动产品，每个用户限购一次';
+                // no break;
+            default:
+                return '购买的商品不存在';
+                // no break;
+        }
+    }
+    
+    /**
+     * 添加新产品
+     * 
+     * @param array $inputs 新产品数组
+     * @return Illuminate\Database\Eloquent\Model
+     */
+    public function addProduct($inputs)
+    {
+        $model = $this->productRe->store($inputs);
+        return $this->getModelById($model->id);
+    }
+    
+    /**
+     * 更新产品
+     *
+     * @param array $inputs 新产品数组
+     * @return Illuminate\Database\Eloquent\Model
+     */
+    public function updateProduct($product_id, $supplier_id, $inputs)
+    {
+        $model = $this->productRe->update($product_id, $inputs, compact('supplier_id'));
+        return $this->getModelById($model->id);
+    }
+}

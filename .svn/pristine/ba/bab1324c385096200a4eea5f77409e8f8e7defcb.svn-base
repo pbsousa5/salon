@@ -1,0 +1,43 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 登陆日志表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateLoginLogsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('login_logout_logs', function(Blueprint $table){
+            $table->increments('id');
+            $table->char('mobile', 11)->index();// 手机号码
+            $table->integer('user_id');// 用户id
+            $table->enum('source', ['debug_web', 'android', 'ios']);// 用户来源
+            $table->string('user_ip', 15);// 用户登陆IP
+            $table->string('content', 64);//操作内容
+            $table->enum('user_type', ['supplier', 'barber', 'consumer']);// 用户身份，1：门店，2：消费者
+            $table->timestamp('created_at');// 创建的时间点
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('login_logout_logs');
+    }
+}

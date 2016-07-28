@@ -1,0 +1,147 @@
+<?php
+namespace App\Http\Controllers\Api\V2;
+
+use App\Http\Controllers\Api\V1\ReviewController as ReviewCon;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\V2\ReviewService;
+use App\Salon\Services\V2\ConsumerService;
+use App\Salon\Services\V2\OrderService;
+use App\Salon\Services\V2\LoginService;
+use App\Salon\Contracts\Repositories\ReviewTagRepositoryInterface;
+use App\Libary\Contracts\Http\ResponseInterface;
+use App\Salon\Repositories\V2\ReviewTagRepository;
+
+/**
+ *
+ *
+ * @desc 评论功能，重载部分获取tag的与评论的部分方法
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月5日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Review",
+ *  description="评论相关API",
+ *  produces="['application/json']"
+ * )
+ */
+class ReviewController extends ReviewCon
+{
+    /**
+     * 评论的服务层
+     * @var ReviewService
+     */
+    protected $reviewSer;
+    /**
+     * 消费者服务层
+     * @var ConsumerService
+     */
+    protected $consumerSer;
+    
+    /**
+     * 订单的服务层
+     * @var OrderService
+     */
+    protected $orderSer;
+    
+    /**
+     * 登陆服务层
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    /**
+     * 评论标签数据仓库
+     * @var ReviewTagRepository
+     */
+    protected $reviewTagRe;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            ReviewService $reviewSer,
+            ConsumerService $consumerSer,
+            OrderService $orderSer,
+            LoginService $loginSer,
+            ReviewTagRepository $reviewTagRe
+    ){
+        parent::__construct($aes, $reviewSer, $consumerSer, $orderSer, $loginSer, $reviewTagRe);
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/reviews/{consumer_id}/tags",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取用于评论的tags,重构方法(1.1)",
+     *      notes="未登录用户不能调用",
+     *      type="void",
+     *      nickname="get_tags",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="用户的id",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到数据"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function tag($consumer_id)
+    {
+        // 检查是否登陆
+        $this->isLogin($consumer_id, LoginService::USER_TYPE_CONSUMER);
+    
+        $list = $this->reviewTagRe->index();
+        
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '未找到数据'
+            ));
+        }
+        
+        foreach ($list as $tag) {
+            unset($tag->id);
+        }
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '获取数据成功', $list));
+    }
+}

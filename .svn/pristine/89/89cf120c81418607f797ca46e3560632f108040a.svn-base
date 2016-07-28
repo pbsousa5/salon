@@ -1,0 +1,162 @@
+{
+    "basePath": "http://192.168.1.8/mei_fa/public/api/v1",
+    "swaggerVersion": "2.1",
+    "apiVersion": "1.0.0",
+    "resourcePath": "/Coupon",
+    "apis": [
+        {
+            "path": "/coupons/{consumer_id}/list",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "\u83b7\u53d6\u6307\u5b9aid\u7528\u6237\u7684\u672a\u8fc7\u671f\u53ca\u672a\u4f7f\u7528\u4f18\u60e0\u5238",
+                    "nickname": "list_coupon",
+                    "type": "ConsumerCoupon",
+                    "parameters": [
+                        {
+                            "paramType": "query",
+                            "name": "timestamp",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u53d1\u9001\u8bf7\u6c42\u7684\u65f6\u95f4\u6233",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "nonce",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u7b7e\u540d\u662f\u52a0\u5165\u7684\u968f\u673a\u5b57\u7b26\u4e32(\u5ba2\u6237\u7aef\u751f\u6210)",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "signature",
+                            "type": "string",
+                            "required": true,
+                            "allowMultiple": false,
+                            "description": "\u751f\u6210\u7684\u7b7e\u540d\uff0c\u8bf7\u4f7f\u7528\u521d\u59cb\u5316\u63a5\u53e3\u4e2d\u7684app_key",
+                            "defaultValue": ""
+                        },
+                        {
+                            "paramType": "path",
+                            "name": "consumer_id",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u6d88\u8d39\u8005id",
+                            "defaultValue": "1"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "page",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u9ed8\u8ba4\u83b7\u53d6\u7b2c\u4e00\u9875\u6570\u636e",
+                            "defaultValue": "1"
+                        },
+                        {
+                            "paramType": "query",
+                            "name": "per_page",
+                            "type": "integer",
+                            "required": false,
+                            "allowMultiple": false,
+                            "description": "\u5f00\u53d1\u9636\u6bb5\uff0c\u9ed8\u8ba42\u6761(\u5efa\u8bae\uff0c\u5982\u679c\u662fwifi\u60c5\u51b5\u4e0b\uff0c\u53ef\u6269\u5927\u8bf7\u6c42\u6570\uff0c\u82e5\u662f3g\u53ef\u51cf\u5c0f)",
+                            "defaultValue": "2"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "\u83b7\u53d6\u6570\u636e\u6210\u529f"
+                        },
+                        {
+                            "code": 401,
+                            "message": "\u7528\u6237\u672a\u767b\u5f55\u6216\u65e0\u6743\u9650\u8bbf\u95ee"
+                        },
+                        {
+                            "code": 404,
+                            "message": "\u67e5\u8be2\u7684\u6570\u636e\u4e0d\u5b58\u5728\u6216\u6ca1\u6709\u66f4\u591a"
+                        },
+                        {
+                            "code": 422,
+                            "message": "\u8bf7\u6c42\u6570\u636e\u9a8c\u8bc1\u672a\u901a\u8fc7"
+                        }
+                    ],
+                    "notes": "\u9700\u8981\u767b\u5f55\u624d\u53ef\u8c03\u7528",
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "authorizations": {}
+                }
+            ]
+        }
+    ],
+    "models": {
+        "ConsumerCoupon": {
+            "id": "ConsumerCoupon",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "consumer_id": {
+                    "description": "\u6d88\u8d39\u8005id",
+                    "type": "integer"
+                },
+                "coupon_id": {
+                    "description": "\u4f18\u60e0\u5238id",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "\u72b6\u6001",
+                    "type": "integer",
+                    "enum": [
+                        "0-\u672a\u4f7f\u7528",
+                        "1-\u5df2\u4f7f\u7528",
+                        "2-\u8fc7\u671f"
+                    ]
+                },
+                "deadline": {
+                    "description": "\u5982\u679ccoupon\u4e2d\u7684valid_term\u662f\u5929\u6570\uff0c\u5219\u8be5\u5904\u662f\u5f53\u524d\u65f6\u95f4\u6233+\u5929\u6570\uff0c\u5426\u5219\u4e0evalid_term\u4e00\u81f4",
+                    "type": "integer"
+                },
+                "coupon": {
+                    "description": "\u4f18\u60e0\u5238\u4fe1\u606f",
+                    "$ref": "Coupon"
+                }
+            }
+        },
+        "Coupon": {
+            "id": "Coupon",
+            "properties": {
+                "id": {
+                    "description": "\u4e3b\u952e",
+                    "type": "integer"
+                },
+                "face_fee": {
+                    "description": "\u4f18\u60e0\u5238\u9762\u503c",
+                    "type": "integer"
+                },
+                "valid_term": {
+                    "description": "\u5230\u671f\u65f6\u95f4",
+                    "type": "integer"
+                },
+                "full_cat": {
+                    "description": "\u6ee1\u591a\u5c11\u51cf",
+                    "type": "integer"
+                },
+                "configs": {
+                    "description": "\u5176\u4ed6\u6761\u4ef6,\u4f7f\u7528json\u683c\u5f0f\u4fdd\u5b58",
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "produces": [
+        "application/json"
+    ]
+}

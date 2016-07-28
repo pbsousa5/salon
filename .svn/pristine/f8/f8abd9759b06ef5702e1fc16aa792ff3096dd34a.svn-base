@@ -1,0 +1,321 @@
+<?php
+namespace App\Http\Controllers\Api\V2;
+
+use App\Http\Controllers\Api\V1\BarberController as BarberCon;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\V2\BarberService;
+use App\Salon\Services\V2\LoginService;
+use App\Salon\Repositories\V2\BarberRepository;
+use Illuminate\Http\Request;
+use Validator;
+use App\Libary\Contracts\Http\ResponseInterface;
+use Illuminate\Support\Str;
+use App\Salon\Repositories\V2\BarberSampleRepository;
+
+/**
+ * 
+ * 
+ * @desc 理发师的控制器
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年11月17日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Barber",
+ *  description="理发师操作类",
+ *  produces="['application/json']"
+ * )
+ */
+class BarberController extends BarberCon
+{
+    /**
+     * The LoginService instance.
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    /**
+     * The BarberRepository instance.
+     * @var BarberRepository
+     */
+    protected $barberRe;
+    
+    /**
+     * The BarberService instance.
+     * @var BarberService
+     */
+    protected $barberSer;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            LoginService $loginSer,
+            BarberRepository $barberRe,
+            BarberService $barberSer
+    ){
+        parent::__construct($aes, $loginSer, $barberRe, $barberSer);
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取理发师列表数据，默认每次10条(1.1)",
+     *      notes="如果请求时上传了门店id，则忽略距离相关问题",
+     *      type="Barber",
+     *      nickname="b_list",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="sortby",
+     *          description="排序字段,fans:粉丝， avg_score:平均分，lower_price:最低价, distance:距离",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="update_at",
+     *          enum="['fans','avg_score','lower_price','distance']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="设置用户id的目的是为了检查该用户是否关注了该理发师",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="门店id，如果传入该字段，表示获取门店下的理发师。如果存在consumer_id，则检查该用户是否关注了该理发师",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=true,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=true,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="longitude",
+     *          description="经度(-180, 180)，sortby=distance时，必须设置(如果不设置，则采用默认排序)",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="104.072007"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="latitude",
+     *          description="纬度(-90, 90)，sortby=distance时，必须设置(如果不设置，则采用默认排序)",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="30.663484"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="kilometer",
+     *          description="单位km，列表时不传，地图模式时，必须上传",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="3"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取数据成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到数据"),
+     *      @SWG\ResponseMessage(code=422, message="数据验证未通过"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function index(Request $request)
+    {
+        // 获取参数，并验证
+        $inputs = $request->only('page', 'per_page', 'consumer_id', 'supplier_id', 'sortby', 'longitude', 'latitude', 'kilometer');
+        $validator = Validator::make($inputs, [
+                'page' => 'required|integer',
+                'per_page' => 'required|integer',
+                'sortby' => 'string|required|in:fans,avg_score,lower_price,distance',
+                'consumer_id' => 'integer',
+                'supplier_id' => 'integer',
+                'longitude' => 'required_if:sortby,distance|string',
+                'latitude' => 'required_if:sortby,distance|string',
+                'kilometer' => 'required_if:sortby,distance',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 获取门店理发师时，默认使用积分排序
+        if ($inputs['supplier_id']) {
+            $inputs['sortby'] = 'avg_score';
+            $inputs = array_remove_keys($inputs, ['kilometer']);
+        } else {
+            $inputs = array_remove_keys($inputs, ['supplier_id']);
+        }
+        
+        $list = $this->barberSer->listBarber($inputs, $inputs['page'], $inputs['per_page']);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NOT_FOUND, '暂无理发师数据'));
+        }
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '获取数据成功', $list));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{id}/add_sample",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="上传指定理发师作品集(1.1)",
+     *      notes="现版本支持多图上传",
+     *      type="BarberSample",
+     *      nickname="add_sample",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="上传作品的理发师id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="opus_img",
+     *          description="图片路径，多长图请用逗号(,)进行分割",
+     *          required=true,
+     *          type="integer",
+     *          paramType="form"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="small_title",
+     *          description="图片标题",
+     *          required=false,
+     *          type="integer",
+     *          paramType="form"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="describe",
+     *          description="图片描述",
+     *          required=false,
+     *          type="string",
+     *          paramType="form"
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="创建成功"),
+     *      @SWG\ResponseMessage(code=422, message="数据验证未通过"),
+     *      @SWG\ResponseMessage(code=401, message="用户未登录，或其他授权问题"),
+     *      @SWG\ResponseMessage(code=500, message="服务器发生异常")
+     *  )
+     * )
+     */
+    public function storeSample(Request $request, $id)
+    {
+        // 检查是否登陆
+        $this->isLogin($id, LoginService::USER_TYPE_BARBER);
+        
+        $inputs = $request->only('opus_img', 'small_title', 'describe');
+        $inputs = array_add($inputs, 'barber_id', $id);
+        $validator = Validator::make($inputs, [
+                'opus_img' => 'required|string',
+                'small_title' => 'required|string',
+                'describe' => 'required|string',
+                'barber_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $flag = $this->barberSer->addSample($inputs);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '添加作品成功'));
+        } else {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_INTERNAL_SERVER_ERROR, '服务器失联啦'));
+        }
+    }
+}

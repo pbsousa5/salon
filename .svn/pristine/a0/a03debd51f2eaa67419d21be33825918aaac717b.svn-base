@@ -1,0 +1,1248 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Api\ApiBaseController;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\SupplierService;
+use App\Libary\Contracts\Http\ResponseInterface;
+use Illuminate\Http\Request;
+use Validator;
+use Illuminate\Support\Str;
+use App\Salon\Services\FollowService;
+use App\Salon\Services\AppService;
+use Cache;
+use App\Salon\Services\OrderService;
+use App\Salon\Services\LoginService;
+use App\Events\UserConsumeEvent;
+
+/**
+ * 
+ * 
+ * @desc 门店控制器
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月31日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Supplier",
+ *  description="门店的接口",
+ *  produces="['application/json']"
+ * )
+ */
+class SupplierController extends ApiBaseController
+{
+    /**
+     * 指定资源
+     * @var SupplierService
+     */
+    protected $supplierSer;
+    
+    /**
+     * 订单服务层
+     * @var OrderService
+     */
+    protected $orderSer;
+    
+    /**
+     * The LoginService instance.
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            SupplierService $supplierSer,
+            OrderService $orderSer,
+            LoginService $loginSer
+    ){
+        parent::__construct($aes);
+        $this->supplierSer = $supplierSer;
+        $this->orderSer = $orderSer;
+        $this->loginSer = $loginSer;
+        //$this->middleware('req');
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/suppliers",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取门店列表数据，默认每次10条",
+     *      notes="如果请求时，未传递用户经纬度，则不距离字段返回空值",
+     *      type="Supplier",
+     *      nickname="s_list",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="sortby",
+     *          description="排序字段,updated_at:时间， avg_score:平均分，lower_price:最低价, distance:距离",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="update_at",
+     *          enum="['updated_at','avg_score','lower_price','distance']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="order",
+     *          description="排序方式desc:倒序， asc:升序",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="desc",
+     *          enum="['desc','asc']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="如果登陆，必须传，消费者id",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="latitude",
+     *          description="纬度(-90, 90)，sortby=distance时，必须设置(如果不设置，则采用默认排序)",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="30.663484"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="longitude",
+     *          description="经度(-180, 180)，sortby=distance时，必须设置(如果不设置，则采用默认排序)",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="104.072007"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="scope",
+     *          description="需要获取的距离范围,(1, 11)值越大，距离用户越近",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取数据成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到数据"),
+     *      @SWG\ResponseMessage(code=422, message="数据验证未通过"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常")
+     *  )
+     * )
+     */
+    public function index(Request $request)
+    {
+        // 获取参数，并验证
+        $inputs = $request->only('page', 'per_page', 'consumer_id', 'sortby', 'order', 'latitude', 'longitude', 'scope');
+        $validator = Validator::make($inputs, [
+                'page' => 'integer',
+                'per_page' => 'integer',
+                'sortby' => 'string|required|in:updated_at,avg_score,lower_price,distance',
+                'order' => 'string|required|in:desc,asc',
+                'consumer_id' => 'integer',
+                'latitude' => 'required_if:sortby,distance|string',
+                'longitude' => 'required_if:sortby,distance|string',
+                'scope' => 'required_if:sortby,distance',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        if (!empty($inputs['latitude']) && !empty($inputs['longitude'])) {
+            $geohash = [$inputs['latitude'], $inputs['longitude']];
+        } else {
+            $geohash = [];
+        }
+        
+        $list = $this->supplierSer->listSupplier($inputs, $inputs['scope'], $inputs['per_page']);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '尚无门店信息'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '请求首页列表数据成功',
+                $list
+        ));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/suppliers/{id}",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取指定id门店的信息",
+     *      notes="无",
+     *      type="Supplier",
+     *      nickname="s_info",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="获取的资源id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="用户的id",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="latitude",
+     *          description="纬度(-90, 90)，如果不设置，则pitch=0",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="30.663484"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="longitude",
+     *          description="经度(-180, 180)，如果不设置，则pitch=0",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="104.072007"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取资源成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到获取的资源"),
+     *      @SWG\ResponseMessage(code=500, message="服务器发生异常")
+     *  )
+     * )
+     */
+    public function show(Request $request, $id)
+    {
+        $inputs = $request->only('latitude', 'longitude');
+        if (empty($inputs)) {
+            $inputs['latitude'] = 0;
+            $inputs['longitude'] = 0;
+        }
+        $inputs['consumer_id'] = $request->input('consumer_id') ? $request->input('consumer_id') : 0;
+        $inputs['id'] = $id;
+        $validator = Validator::make($inputs, [
+                'latitude' => 'between:-90,90',
+                'longitude' => 'between:-180,180',
+                'consumer_id' => 'integer',
+                'id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $supplier = $this->supplierSer->getSingleInfo(
+                        compact('id'),
+                        ['latitude'=>$inputs['latitude'], 'longitude'=>$inputs['longitude'], 'consumer_id'=>$inputs['consumer_id']]
+                    );
+        if (is_null($supplier)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '获取的资源不存在'
+            ));
+        }
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '请求资源成功',
+                $supplier
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/{account}/exist",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="检查用户是否已经存在",
+     *      notes="无",
+     *      type="void",
+     *      nickname="exist",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="account",
+     *          description="注册账号(默认为手机号码)",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="请求成功"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据格式不正确"),
+     *      @SWG\ResponseMessage(code=500, message="服务端发生错误")
+     *  )
+     * )
+     */
+    public function checkExistUser(Request $request, $account)
+    {
+        $validator = Validator::make(
+                compact('account'),
+                ['account' => 'mobile']
+        );
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '手机号码不合法',
+                    $validator->messages()
+            ));
+        }
+        
+        $count = $this->supplierSer->count('mobile', $account);
+        if ($count) {
+            $exist = true;# 用户存在
+        } else {
+            $exist = false;# 用户尚不存在
+        }
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '请求成功', compact('exist')));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/login",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="门店登陆",
+     *      notes="请将登陆名称与密码进行AES加密",
+     *      type="Supplier",
+     *      nickname="login",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="data",
+     *          description="加密、编码后的数据eg:{'data':'account=xxx&password=123'}",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="esyl+HKfuNvTCMiIg4LM23+Z6Htd4eXdMmCy7zOYgrBG8JYSKzo+ovYeGAGerjDW\n"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="登陆成功"),
+     *      @SWG\ResponseMessage(code=404, message="登陆的用户不存在"),
+     *      @SWG\ResponseMessage(code=422, message="登陆用户密码错误"),
+     *      @SWG\ResponseMessage(code=500, message="服务端未知错误")
+     *  )
+     * )
+     */
+    public function login()
+    {
+        $data = $this->decodeAppData(bodys('json', 'data'));
+        if (empty($data)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        $validator = Validator::make($data, [
+                'account' => 'required|string',
+                'password' => 'required',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        
+        $supplier = $this->loginSer->loginApp($data, LoginService::USER_TYPE_SUPPLIER);
+        if (is_null($supplier)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '用户不存在或密码错误'
+            ));
+        }
+        
+        $supplier->token = $this->encodeAppData($supplier->token);
+        $this->supplierSer->handleData($supplier, '');
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '登陆成功', $supplier));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/{id}",
+     *  @SWG\Operation(
+     *      method="DELETE",
+     *      summary="退出登陆",
+     *      notes="无",
+     *      type="void",
+     *      nickname="delete",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="_method",
+     *          description="方法欺骗，为了解决部分不支持delete请求的问题而设计",
+     *          required=true,
+     *          type="string",
+     *          paramType="form",
+     *          allowMultiple=false,
+     *          defaultValue="DELETE"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="退出登陆的门店id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="退出登陆成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到该用户登陆信息"),
+     *      @SWG\ResponseMessage(code=500, message="服务器故障")
+     *  )
+     * )
+     */
+    public function logout($id)
+    {
+        $user_id = (string) $id;
+        $flag = $this->loginSer->logoutApp($user_id, LoginService::USER_TYPE_SUPPLIER);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NO_CONTENT,
+                    '退出登陆成功'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_NOT_FOUND,
+                '未找到该用户登陆信息或其他问题'
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/{id}/edit",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="更新门店信息",
+     *      notes="此时加密的数据请使用token",
+     *      type="Supplier",
+     *      nickname="update",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="需要修改数据的门店id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="aes加密需要修改的数据:{'data':'head=xxx&age_tag=123'}",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="TwtVP/i/F62Ose7ePjsmW2sX4piRvDlm2YoZU91jf2DyYTgNBwHgVRDfBMUUzLEK"
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="更新成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户登陆过期或其他权限原因"),
+     *      @SWG\ResponseMessage(code=500, message="服务器错误")
+     *  )
+     * )
+     */
+    public function modify($id)
+    {
+        // 检查是否登陆
+        $this->isLogin($id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($id, LoginService::USER_TYPE_SUPPLIER);
+        
+        $inputs = $this->decodeAppData(bodys('json', 'data'), $cacheValue['token']);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'name' => 'string',
+                'staff_count' => 'integer',
+                'phones' => 'array',
+                'gallerys' => 'array',
+                'basic_discount' => 'integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        if (array_key_exists('account', $inputs)) {
+            unset($inputs['account']);
+        }
+        if (array_key_exists('mobile', $inputs)) {
+            unset($inputs['mobile']);
+        }
+        if (array_key_exists('password', $inputs)) {
+            unset($inputs['password']);
+        }
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '你未修改任何内容'
+            ));
+        }
+        
+        $flag = $this->supplierSer->modifySupplier(['id'=>$id], $inputs);
+        if (is_null($flag)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务端DB发生异常'
+            ));
+        }
+        
+        $retInfo = $this->supplierSer->getSingleInfo(['id'=>$id]);
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '更新成功', $retInfo));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/passwd",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="重置密码(忘记密码、修改密码均使用该接口)",
+     *      notes="验证码，请调用获取短信接口",
+     *      type="Supplier",
+     *      nickname="reset_passwd",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_body",
+     *          description="请将数据进行aes加密,aes(mobile=123&password=123&sms_code=141107, app_key)",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="p/tc05ia8h8HImiQYNoLxgWi8s5ghbSrVl5miQ4297UvNCRzIAMwPRTo95taMPxtpkP1VLahBpb9vkJGQkMdHSp9vQPof6mi6hcWaOpDsA4="
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="更新成功"),
+     *      @SWG\ResponseMessage(code=401, message="未登录或门店无权限修改"),
+     *      @SWG\ResponseMessage(code=422, message="验证码错误"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常"),
+     *  )
+     * )
+     */
+    public function resetPassWord(AppService $appSer)
+    {   
+        $inputs = $this->decodeAppData(bodys('json', 'data'));
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'mobile' => 'required|mobile',
+                'password' => 'required|string',
+                'sms_code' => 'required|digits:6',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 验证验证码
+        if (
+                !$appSer->validateCode($inputs['mobile'],$inputs['sms_code']) &&
+                !Str::equals(config('appinit.debug_code', '141107'), $inputs['sms_code'])
+        ) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNAUTHORIZED,
+                    '验证码错误'
+            ));
+        }
+        
+        $flag = $this->supplierSer->modifySupplier(['mobile'=>$inputs['mobile']], ['password'=>$inputs['password']]);
+        if (is_null($flag)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务端DB异常，请稍后再试'
+            ));
+        }
+        
+        $credentials = [
+                'mobile' => $inputs['mobile'],
+                'password' => $inputs['password'],
+        ];
+        
+        $supplier = $this->loginSer->loginApp($credentials, LoginService::USER_TYPE_SUPPLIER);
+        $supplier->token = $this->encodeAppData($supplier->token);
+        $retInfo = $this->supplierSer->handleData($supplier);
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '登陆成功', $retInfo));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/suppliers/user_consume",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="用户消费接口",
+     *      notes="可通过扫码或手动输入进行验证",
+     *      type="void",
+     *      nickname="verify_code",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_body",
+     *          description="需要门店id、消费码，aes(supplier_id=x&consume_code=xxxxx, app_key)",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          defaultValue="E1/WNXI/3ePaAmwvqg5SSDg+8vGaFp+Tz4Vj0+W5V65Yy4XJ/Sl0FmphuDB/suIua8lwDOJ8hSup2fqZ9Fq7oTssCWA9BysoNJzMBMe3YhI="
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="验证消费码成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到该消费码"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常或网络阻塞，不确定操作是否成功")
+     *  )
+     * )
+     */
+    public function consume(Request $request)
+    {
+        $inputs = $this->decodeAppData(bodys('json', 'data'));
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        $validator = Validator::make($inputs, [
+                'supplier_id' => 'required|integer',
+                'consume_code' => 'required|string|size:9',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 依据消费码，获取该消费码状态
+        $product = $this->orderSer->getModelByConsumeCode(
+                $inputs['consume_code'],
+                $inputs['supplier_id']
+        );
+        if (empty($product)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '该消费码不存在'
+            ));
+        }
+        
+        // 获取该订单状态
+        $status = $this->orderSer->getOrderStatus($product->orderInfo);
+        if ($status!=3) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    $this->orderSer->getOrderStatusTxt($status)
+            ));
+        }
+
+        // 进行消费
+        $orderProduct = $this->orderSer->useConsumeCode($product);
+        if (is_null($orderProduct)) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_INTERNAL_SERVER_ERROR, '服务器异常'));
+        }
+        
+        // 触发消费事件
+        event(new UserConsumeEvent($orderProduct));
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '消费成功'));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/{supplier_id}/get_customer",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取门店的客户信息",
+     *      notes="只有在该门店消费了的消费者，才算是该门店的客户,返回的数据会用该门店的token加密",
+     *      type="void",
+     *      nickname="get_list",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="门店id",
+     *          required=true,
+     *          type="string",
+     *          paramType="path"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取客户关系成功"),
+     *      @SWG\ResponseMessage(code=404, message="该门店暂无客户"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常或网络阻塞，不确定操作是否成功")
+     *  )
+     * )
+     */
+    public function customer(Request $request, $supplier_id)
+    {
+        $inputs = $request->only('page', 'per_page');
+        $inputs['supplier_id'] = $supplier_id;
+        $validator = Validator::make($inputs, [
+                'page' => 'integer',
+                'per_page' => 'integer',
+                'supplier_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        
+        // 获取列表数据
+        $list = $this->supplierSer->getCustomerList($supplier_id, $inputs['per_page']);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '该门店暂无客户数据'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $this->encodeAppData($list->toJson(), $cacheValue['token'])
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/{supplier_id}/bind_barber",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="门店绑定理发师",
+     *      notes="需要登录，post数据需要使用门店token进行加密.",
+     *      type="Barber",
+     *      nickname="bind_barber",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="门店id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="aes(mobile=123456, token),请将理发师手机号码使用门店token加密后传输",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="/rby2E9a+ikQXN9BzU14C1A7Im5SHRWQsSB6gBhHnJE="
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="绑定成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户登陆过期或其他权限原因"),
+     *      @SWG\ResponseMessage(code=500, message="服务器错误")
+     *  )
+     * )
+     */
+    public function bindBarber($supplier_id)
+    {
+        // 检查是否登陆
+        $this->isLogin($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        
+        $inputs = $this->decodeAppData(bodys('json', 'data'), $cacheValue['token']);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'mobile' => 'required|mobile',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 完成绑定操作
+        $barber = $this->supplierSer->bindBarber($supplier_id, $inputs['mobile']);
+        if (is_null($barber)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_FORBIDDEN,
+                    '该理发师目前处于绑定状态'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '绑定成功', $barber));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/suppliers/{supplier_id}/unbund_barber",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="门店解绑理发师",
+     *      notes="需要登录，post数据需要使用门店token进行加密.",
+     *      type="Barber",
+     *      nickname="bind_barber",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="supplier_id",
+     *          description="门店id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="aes(barber_id=1, token),请将理发师id使用门店token加密后传输",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="/rby2E9a+ikQXN9BzU14C1A7Im5SHRWQsSB6gBhHnJE="
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="解绑成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户登陆过期或其他权限原因"),
+     *      @SWG\ResponseMessage(code=415, message="请求数据错误"),
+     *      @SWG\ResponseMessage(code=500, message="服务器错误")
+     *  )
+     * )
+     */
+    public function unbundBarber(Request $request, $supplier_id)
+    {
+        // 检查是否登陆
+        $this->isLogin($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+        $cacheValue = $this->loginSer->getUserCache($supplier_id, LoginService::USER_TYPE_SUPPLIER);
+
+        $inputs = $this->decodeAppData(bodys('json', 'data'), $cacheValue['token']);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'barber_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $flag = $this->supplierSer->unbundBarber($supplier_id, $inputs['barber_id']);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NO_CONTENT, '解绑成功'));
+        } else {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE, '可能包含有未消费的订单'));
+        }
+    }
+}

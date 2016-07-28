@@ -1,0 +1,45 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 保存用户地址
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateAddresssTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('addresss', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('user_id')->index();// 门店或者理发师id
+            $table->enum('user_type', ['supplier', 'barber', 'manager'])->default('supplier');
+            $table->string('distance', 12)->index();// geohash值，用来进行位置排序
+            $table->string('longitude', 10); //经度(-180, 180)
+            $table->string('latitude', 10); //纬度度(-90, 90)
+            $table->string('province', 10);// 省
+            $table->string('city', 20);// 市
+            $table->string('district', 20);// 区
+            $table->string('detail', 32);// 详细地址
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('addresss');
+    }
+}

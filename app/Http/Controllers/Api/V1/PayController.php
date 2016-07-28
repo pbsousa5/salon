@@ -1,0 +1,377 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Api\ApiBaseController;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use Illuminate\Http\Request;
+use App\Libary\Pay\Wxpay\Lib\WxPayNotify;
+use App\Libary\Pay\Alipay\Lib\AlipayNotify;
+use Illuminate\Support\Str;
+use App\Salon\Services\PayNotifyService;
+use Validator;
+use App\Libary\Contracts\Http\ResponseInterface;
+use App\Events\PushInfoEvent;
+use App\Salon\Services\WxpayService;
+use App\Salon\Services\OrderService;
+use Cache;
+use App\Events\NotifyPayOrderEvent;
+use App\Events\OrderPushEvent;
+use App\Salon\OrderInfo;
+
+/**
+ * 
+ * 
+ * @desc 支付接口回调通知接口
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月10日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Pay",
+ *  description="支付回调接口",
+ *  produces="['application/json']"
+ * )
+ */
+class PayController extends ApiBaseController
+{
+    /**
+     * 微信异步通知
+     * @var WxpayService
+     */
+    protected $wxpaySer;
+    
+    /**
+     * 支付宝异步通知
+     * @var AlipayNotify
+     */
+    protected $alipaySer;
+    
+    /**
+     * 支付的服务层
+     * @var PayNotifyService
+     */
+    protected $paySer;
+    
+    /**
+     * 订单服务层
+     * @var OrderService
+     */
+    protected $orderSer;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            AlipayNotify $alipaySer,
+            WxpayService $wxpaySer,
+            PayNotifyService $paySer,
+            OrderService $orderSer
+    ){
+        parent::__construct($aes);
+        $this->alipaySer = $alipaySer;
+        $this->wxpaySer = $wxpaySer;
+        $this->paySer = $paySer;
+        $this->orderSer = $orderSer;
+        //$this->middleware('req', ['only'=>['wxorder']]);
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/pays/{type}/notify",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="支付宝、微信、自测支付成功回调接口",
+     *      notes="以下三个参数，是模拟测试时需要传送的参数",
+     *      type="void",
+     *      nickname="pay_back",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="type",
+     *          description="支付的类型: wxpay alipay debugpay(测试使用)",
+     *          required=true,
+     *          type="string",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue="debugpay",
+     *          enum="['debugpay','wxpay','alipay']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="out_trade_no",
+     *          description="由平台生成的订单号",
+     *          required=false,
+     *          type="string",
+     *          paramType="form",
+     *          allowMultiple=false,
+     *          defaultValue="BNS201508071326299801431"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="trade_no",
+     *          description="支付的交易号，模拟支付宝、微信账号",
+     *          required=false,
+     *          type="string",
+     *          paramType="form",
+     *          allowMultiple=false,
+     *          defaultValue="123456"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="total_fee",
+     *          description="交易的总金额(单位为分)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="form",
+     *          allowMultiple=false,
+     *          defaultValue="995"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="gmt_payment",
+     *          description="用户支付的时间",
+     *          required=false,
+     *          type="string",
+     *          paramType="form",
+     *          allowMultiple=false,
+     *          defaultValue="2015-08-10 15:30:12"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="success")
+     *  )
+     * )
+     */
+    public function notify(Request $request, $type)
+    {
+        switch ($type) {
+            case 'alipay':
+                return $this->alipayNotify($request);
+                // no break;
+            case 'wxpay':
+                return $this->wxpayNotify($request);
+                // no break;
+            case 'debugpay':
+                return $this->debugNotify($request, $type);
+                // no break;
+            default:
+                echo 'error';
+                break;
+        }
+    }
+    
+    // alipay的回调接口
+    protected function alipayNotify(Request $request)
+    {
+        $verify_result = $this->alipaySer->verifyNotify();
+        // get方式模拟支付宝，debug时候使用
+        //$verify_result = $this->alipay->verifyReturn();
+        if ($verify_result) {//验证成功
+            // 获取交易状态
+            $status = $request->input('trade_status');
+            //商户订单号
+            $out_trade_no = $request->input('out_trade_no');
+            
+            if (Str::equals('TRADE_FINISHED', $status) || Str::equals('TRADE_SUCCESS', $status)) {
+                // 检查是否已回调过了
+                $flag = $this->paySer->checkPayStatus($out_trade_no);
+                if ($flag) {
+                    echo "success";exit;
+                }
+                
+                // 获取数据，更新订单状态
+                $data['re_trade_no'] = $request->input('trade_no');//支付宝交易号
+                $data['re_cash_fee'] = bcmul($request->input('total_fee'), 100);//支付的总金额
+                $data['re_payment_time'] = $request->input('gmt_payment');//支付时间
+                $data['pay_status'] = 1;
+                $data['pay_code'] = 'ALiPAY_DEBIT';
+                $data['pay_name'] = '支付宝支付';
+                
+                $orderInfo = $this->paySer->updateOrder($out_trade_no, $data);
+                if (! is_null($orderInfo)) {
+                    // 触发订单支付成功的事件
+                    event(new NotifyPayOrderEvent($orderInfo));
+                    event(new OrderPushEvent($orderInfo));
+                } else {
+                    echo "faile";exit;
+                }
+            } else {
+		        echo "faile";exit;
+            }
+            
+	        echo "success";
+        } else {
+            //验证失败
+            echo "fail";
+        }
+    }
+    
+    // wxpay的回调接口
+    protected function wxpayNotify(Request $request)
+    {
+        $this->wxpaySer->Handle(false);
+    }
+    
+    // debugpay的回调接口
+    protected function debugNotify(Request $request, $type)
+    {
+        $inputs = $request->all();
+        $inputs = array_add($inputs, 'type', $type);
+        // debug测试用
+        $inputs = array_add($inputs, 'out_trade_no', 'BNS201508071326299801431');
+        // 检查订单数据
+        $validator = Validator::make($inputs, [
+                'type' => 'required|in:debugpay',
+                'trade_no' => 'required|string',
+                'out_trade_no' => 'required|string',
+                'total_fee' => 'required|integer',
+                'gmt_payment' => 'required',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否已回调过了
+        $flag = $this->paySer->checkPayStatus($inputs['out_trade_no']);
+        if ($flag) {
+            echo "success";exit;
+        }
+        
+        // 获取数据
+        $data['re_trade_no'] = $inputs['trade_no'];//支付宝交易号
+        $data['re_cash_fee'] = $inputs['total_fee'];//支付的总金额
+        $data['re_payment_time'] = $inputs['gmt_payment'];//支付时间
+        $data['pay_status'] = 1;
+        $data['pay_code'] = 'DEBUG_DEBIT';
+        $data['pay_name'] = '测试订单异步通知';
+        
+        $orderInfo = $this->paySer->updateOrder($inputs['out_trade_no'], $data);
+        if (! is_null($orderInfo)) {
+            // 触发订单支付成功的事件
+            event(new NotifyPayOrderEvent($orderInfo));
+            event(new OrderPushEvent($orderInfo));
+            echo "success";
+        } else {
+            echo "faile";
+        }
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/pays/{order_id}",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="向微信支付服务器进行下单操作",
+     *      notes="无",
+     *      type="void",
+     *      nickname="wx_order",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="Device-Type",
+     *          description="设备类型(版本信息只能为：x.x形式)",
+     *          required=true,
+     *          type="string",
+     *          paramType="header",
+     *          allowMultiple=false,
+     *          enum="['Android4.0','Ios7.0']"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="order_id",
+     *          description="需要下单的订单编号",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="生成订单成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户未登录"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证未通过")
+     *  )
+     * )
+     */
+    public function wxorder(Request $request, $order_id)
+    {
+        $attach = $request->header('Device-Type');
+        $inputs = compact('order_id', 'attach');
+        // 检查订单数据
+        $validator = Validator::make($inputs, [
+                'order_id' => 'required|integer',
+                'attach' => 'required|string'
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查订单是否合法
+        $order = $this->orderSer->getSignInfo('', $order_id);
+        if (is_null($order)) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NOT_FOUND, '该订单不存在'));
+        }
+        
+        if ($order->order_status!=2) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    $this->orderSer->getOrderStatusTxt($order->order_status)
+            ));
+        }
+        
+        
+        $consumer = Cache::get('consumer'.$order->consumer_id);
+        if (empty($consumer)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNAUTHORIZED,
+                    '用户未登录'
+            ));
+        }
+        // 获取更新的数据,登陆后，使用token作为key
+        $token = $consumer['token'];
+        // 进行下单操作
+        $param['body'] = $order->orderProducts[0]->product_name;
+        $param['detail'] = $order->orderProducts[0]->product_desc;
+        $param['attach'] = $inputs['attach'];
+        $param['trade_no'] = $order->trade_no;
+        $param['total_fee'] = $order->pay_fee;
+        $xml = $this->wxpaySer->unifiedorder($param);
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_CREATED,
+                '向微信下单成功',
+                $this->encodeAppData(json_encode($xml), $token)
+        ));
+    }
+}

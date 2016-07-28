@@ -1,0 +1,184 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Api\ApiBaseController;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\CouponService;
+use App\Libary\Contracts\Http\ResponseInterface;
+use Validator;
+use Illuminate\Http\Request;
+use App\Salon\Services\LoginService;
+
+/**
+ * 
+ * 
+ * @desc 请描述这个类的功能
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月6日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Coupon",
+ *  description="优惠券信息API",
+ *  produces="['application/json']"
+ * )
+ */
+class CouponController extends ApiBaseController
+{
+    /**
+     * 优惠券的服务层
+     * @var CouponService
+     */
+    protected $couponSer;
+    
+    /**
+     * 登陆服务层
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    public function __construct(EncrypterInterface $aes, CouponService $couponSer, LoginService $loginSer)
+    {
+        parent::__construct($aes);
+        $this->loginSer = $loginSer;
+        $this->couponSer = $couponSer;
+        //$this->middleware('req', ['only'=>['index']]);
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/coupons/{consumer_id}/list",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取指定id用户的未过期及未使用优惠券",
+     *      notes="需要登录才可调用",
+     *      type="ConsumerCoupon",
+     *      nickname="list_coupon",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="消费者id",
+     *          required=false,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取数据成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户未登录或无权限访问"),
+     *      @SWG\ResponseMessage(code=404, message="查询的数据不存在或没有更多"),
+     *      @SWG\ResponseMessage(code=422, message="请求数据验证未通过")
+     *  )
+     * )
+     */
+    public function index(Request $request, $consumer_id)
+    {
+        // 获取参数，并验证
+        $inputs = $request->only('page', 'per_page');
+        $inputs['consumer_id'] = $consumer_id;
+        $validator = Validator::make($inputs, [
+                'page' => 'integer',
+                'per_page' => 'integer',
+                'consumer_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($consumer_id, LoginService::USER_TYPE_CONSUMER);
+        
+        $list = $this->couponSer->listCoupons($inputs['consumer_id'], 2);
+        
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '未找到或未有更多数据'
+            ));
+        }
+        
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $list
+        ));
+    }
+    
+    /**
+     * 用于手机上获取优惠券
+     * 
+     */
+    public function getCoupon()
+    {
+        return view('coupon.index');
+    }
+    
+    /**
+     * 手机上提交验证码信息
+     *
+     */
+    public function postCoupon()
+    {
+        header('Access-Control-Allow-Origin:*');
+        $tmp['status'] = "success";
+        $tmp['money'] = 20;
+        
+        echo json_encode($tmp);exit;
+    }
+}

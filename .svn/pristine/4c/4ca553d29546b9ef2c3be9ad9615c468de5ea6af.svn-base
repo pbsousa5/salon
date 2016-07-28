@@ -1,0 +1,45 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 门店的管理者
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateSupplierManagersTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('supplier_managers', function(Blueprint $table){
+            $table->increments('id');
+            $table->char('mobile', 11)->index();// 登陆的手机号码
+            $table->string('password', 60);// 登陆密码
+            $table->string('company_name', 32);// 公司名称
+            $table->string('legal_name', 10);// 法人姓名
+            $table->char('id_num', 18);// 法人身份证
+            $table->string('id_back_photo', 32);// 法人身份证反面
+            $table->string('id_front_photo', 32);// 法人身份证正面
+            $table->string('license_photo', 32);// 营业执照照片
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('supplier_managers');
+    }
+}

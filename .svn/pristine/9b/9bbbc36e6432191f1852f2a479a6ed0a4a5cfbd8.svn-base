@@ -1,0 +1,1112 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Api\ApiBaseController;
+use App\Libary\Contracts\Encryption\EncrypterInterface;
+use App\Salon\Services\LoginService;
+use Validator;
+use App\Libary\Contracts\Http\ResponseInterface;
+use App\Salon\Barber;
+use App\Salon\Repositories\BarberRepository;
+use Illuminate\Http\Request;
+use App\Salon\BarberProduct;
+use App\Salon\Services\BarberService;
+use Illuminate\Support\Str;
+use App\Salon\Services\AppService;
+use App\Salon\Repositories\BarberSampleRepository;
+
+/**
+ * 
+ * 
+ * @desc 理发师的控制器
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年8月27日
+ *
+ *
+ * @SWG\Resource(
+ *  apiVersion="1.0.0",
+ *  swaggerVersion="2.1",
+ *  basePath="http://localhost/mei_fa/public/api/v2",
+ *  resourcePath="/Barber",
+ *  description="理发师操作类",
+ *  produces="['application/json']"
+ * )
+ */
+class BarberController extends ApiBaseController
+{
+    /**
+     * The LoginService instance.
+     * @var LoginService
+     */
+    protected $loginSer;
+    
+    /**
+     * The BarberRepository instance.
+     * @var BarberRepository
+     */
+    protected $barberRe;
+    
+    /**
+     * The BarberService instance.
+     * @var BarberService
+     */
+    protected $barberSer;
+    
+    public function __construct(
+            EncrypterInterface $aes,
+            LoginService $loginSer,
+            BarberRepository $barberRe,
+            BarberService $barberSer
+    ){
+        parent::__construct($aes);
+        $this->loginSer = $loginSer;
+        $this->barberRe = $barberRe;
+        $this->barberSer = $barberSer;
+        //$this->middleware('req');
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/login",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="理发师登陆",
+     *      notes="理发师登陆情况：首次登陆，会返回status=1，此时同时返回申请绑定门店的所有项目，字段为：supplierProducts，如果status=2表示已修改密码未完善资料。status=3表示登陆未添加项目，status=4表示拒绝绑定，status=5表示已绑定门店，status=6表示已解绑",
+     *      type="Barber",
+     *      nickname="login",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="data",
+     *          description="aes(mobile=xxx&password=123, app_key)",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="p/tc05ia8h8HImiQYNoLxlpMxsT14PYc01shsWB+VfEh9gI0/0oaX9BD8oKsI4YL"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="登陆成功"),
+     *      @SWG\ResponseMessage(code=404, message="登陆的用户不存在或密码错误"),
+     *      @SWG\ResponseMessage(code=500, message="服务端未知错误")
+     *  )
+     * )
+     */
+    public function login()
+    {
+        $data = $this->decodeAppData(bodys('json', 'data'));
+        if (empty($data)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        
+        // 由于客户端登陆时，返回车错误信息不能正确解析，展示屏蔽
+        /* $validator = Validator::make($data, [
+                'mobile' => 'mobile',
+                'password' => 'required',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        } */
+        
+        $barber = $this->loginSer->loginApp($data, LoginService::USER_TYPE_BARBER);
+        if (is_null($barber)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '用户不存在或密码错误'
+            ));
+        }
+        
+        // 如果用于处于未绑定或首次登陆状态，并且存在预约绑定的门店，则返回该门店所有项目
+        if (
+                $barber->barber_status==Barber::BARBER_STATUS_NOT_BIND ||
+                $barber->barber_status==Barber::BARBER_STATUS_NOT_LOGIN
+        ) {
+            if ($barber->supplier) {
+                $barber->supplierProducts = $barber->supplier->products()->where('is_delete', 0)->get();
+            } else {
+                $barber->supplierProducts = [];
+            }
+        }
+        $barber->token = $this->encodeAppData($barber->token);
+        $barber = $this->barberSer->handleData($barber);
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '登陆成功', $barber));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{id}",
+     *  @SWG\Operation(
+     *      method="DELETE",
+     *      summary="理发师退出登陆",
+     *      notes="无",
+     *      type="void",
+     *      nickname="delete",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="_method",
+     *          description="方法欺骗，为了解决部分不支持delete请求的问题而设计",
+     *          required=true,
+     *          type="string",
+     *          paramType="form",
+     *          allowMultiple=false,
+     *          defaultValue="DELETE"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="退出登陆的理发师id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="退出登陆成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到该用户登陆信息"),
+     *      @SWG\ResponseMessage(code=500, message="服务器故障")
+     *  )
+     * )
+     */
+    public function logout($id)
+    {
+        $user_id = (string) $id;
+        $flag = $this->loginSer->logoutApp($user_id, LoginService::USER_TYPE_BARBER);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NO_CONTENT,
+                    '退出登陆成功'
+            ));
+        }
+    
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_NOT_FOUND,
+                '未找到该用户登陆信息或其他问题'
+        ));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{id}/edit",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="更新理发师信息，补全资料也调用该接口",
+     *      notes="此时加密的数据请使用token,并且，如果是首次修改资料，请在资料修改中，上传：status=3。如果用户拒绝绑定，调用该接口，设置status=4即可",
+     *      type="void",
+     *      nickname="update",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="需要修改数据的用户id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_data",
+     *          description="aes加密需要修改的数据:{'data':'head=xxx&age_tag=123&status=3'}",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="hbuxGIxLduzg7bnRuNzUecrLxj+0ciOo7CUxurg9Jdo="
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="更新成功"),
+     *      @SWG\ResponseMessage(code=401, message="用户登陆过期或其他权限原因"),
+     *      @SWG\ResponseMessage(code=500, message="服务器错误")
+     *  )
+     * )
+     */
+    public function modify($id)
+    {
+        // 检查是否登陆
+        $this->isLogin($id, LoginService::USER_TYPE_BARBER);
+        $cacheValue = $this->loginSer->getUserCache($id, LoginService::USER_TYPE_BARBER);
+
+        $inputs = $this->decodeAppData(bodys('json', 'data'), $cacheValue['token']);
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'head_img' => 'string',
+                'nickname' => 'string',
+                'birthday' => 'string',
+        ]);
+        
+        // 检查是否是拒绝绑定
+        if (array_key_exists('status', $inputs) && $inputs['status'] == Barber::BARBER_STATUS_LOGIN_REFUSE) {
+            $inputs['supplier_id'] = 0;
+        }
+
+        $barber = $this->barberRe->update(['id'=>$id], $inputs);
+        if (is_null($barber)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务端DB发生异常'
+            ));
+        }
+
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '更新成功'));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/passwd",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="重置密码(忘记密码、修改密码均使用该接口)",
+     *      notes="验证码，请调用获取短信接口",
+     *      type="Barber",
+     *      nickname="reset_passwd",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="m_body",
+     *          description="请将数据进行aes加密,aes(mobile=123&password=123&sms_code=141107, app_key)",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue="p/tc05ia8h8HImiQYNoLxnbkYzH8KXjjgCG9RH8rE/MaL6B9rtMQdwJ9L/DgQQRkcjpO5tpKrLJHmRY4g0TU89woDK1pmryHeoC111sdOPE="
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="更新成功"),
+     *      @SWG\ResponseMessage(code=401, message="未登录或用户无权限修改"),
+     *      @SWG\ResponseMessage(code=422, message="验证码错误"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常"),
+     *  )
+     * )
+     */
+    public function resetPassWord(AppService $appSer)
+    {
+        $inputs = $this->decodeAppData(bodys('json', 'data'));
+        if (empty($inputs)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '加密数据不能解析'
+            ));
+        }
+        // 检验数据是否合法
+        $validator = Validator::make($inputs, [
+                'mobile' => 'required|mobile',
+                'password' => 'required|string',
+                'sms_code' => 'required|digits:6',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNSUPPORTED_MEDIA_TYPE,
+                    '请求数据错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 验证验证码
+        if (
+                !$appSer->validateCode($inputs['mobile'], $inputs['sms_code']) &&
+                !Str::equals(config('appinit.debug_code', '141107'), $inputs['sms_code'])
+        ) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNAUTHORIZED,
+                    '验证码错误'
+            ));
+        }
+    
+        // 获取id
+        $flag = $this->barberRe->update(['mobile'=>$inputs['mobile']], ['password'=>$inputs['password']]);
+        if (is_null($flag)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_INTERNAL_SERVER_ERROR,
+                    '服务端DB异常，请稍后再试'
+            ));
+        }
+    
+        $credentials = [
+                'mobile' => $inputs['mobile'],
+                'password' => $inputs['password'],
+        ];
+        // 重新登陆一次
+        $barber = $this->loginSer->loginApp($credentials, LoginService::USER_TYPE_BARBER);
+        $barber->token = $this->encodeAppData($barber->token);
+        $barber = $this->barberSer->handleData($barber);
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '登陆成功', $barber));
+    }
+    
+    public function index(Request $request)
+    {
+        // 获取参数，并验证
+        $inputs = $request->only('page', 'per_page', 'consumer_id', 'supplier_id', 'sortby', 'order', 'latitude', 'longitude', 'scope');
+        $validator = Validator::make($inputs, [
+                'page' => 'integer',
+                'per_page' => 'integer',
+                'sortby' => 'string|required|in:updated_at,avg_score,lower_price,distance',
+                'order' => 'string|required|in:desc,asc',
+                'consumer_id' => 'integer',
+                'supplier_id' => 'integer',
+                'latitude' => 'required_if:sortby,distance|string',
+                'longitude' => 'required_if:sortby,distance|string',
+                'scope' => 'required_if:sortby,distance',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 如果设置了门店id，则将消费者id去除
+        /* if (isset($inputs['supplier_id']) && !empty($inputs['supplier_id'])) {
+            unset($inputs['consumer_id']);
+        } */
+        $list = $this->barberSer->listBarber($inputs, $inputs['scope'], $inputs['per_page']);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NOT_FOUND, '暂无理发师数据'));
+        }
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '获取数据成功', $list));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{id}",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取指定id理发师的信息(可用于刷新个人信息)",
+     *      notes="如果是，门店端获取时，可不上传用户id、及经纬度信息",
+     *      type="Barber",
+     *      nickname="s_info",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="获取的资源id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="consumer_id",
+     *          description="用户的id，如果用户登陆，则需要上传，用于检查其是否关注该理发师",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false
+     *      ),
+     *      @SWG\Parameter(
+     *          name="latitude",
+     *          description="纬度(-90, 90)，如果不设置，则pitch=0",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="30.663484"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="longitude",
+     *          description="经度(-180, 180)，如果不设置，则pitch=0",
+     *          required=false,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="104.072007"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取资源成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到获取的资源"),
+     *      @SWG\ResponseMessage(code=500, message="服务器发生异常")
+     *  )
+     * )
+     */
+    public function show(Request $request, $id)
+    {
+        $inputs = $request->only('latitude', 'longitude', 'consumer_id');
+        $inputs = array_add($inputs, 'latitude', 0);
+        $inputs = array_add($inputs, 'longitude', 0);
+        $inputs = array_add($inputs, 'consumer_id', 0);
+        $inputs['id'] = $id;
+        $validator = Validator::make($inputs, [
+                'latitude' => 'between:-90,90',
+                'longitude' => 'between:-180,180',
+                'consumer_id' => 'integer',
+                'id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $barber = $this->barberRe->show(['id'=>$id]);
+        if (is_null($barber)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '获取的资源不存在'
+            ));
+        }
+        $srcLongLat = implode(',', [$inputs['longitude'], $inputs['latitude']]);
+        $barber = $this->barberSer->handleData($barber, $srcLongLat, $inputs);
+    
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '请求资源成功',
+                $barber
+        ));
+    }
+    
+    public function storeSample(Request $request, $id)
+    {
+        $inputs = $request->only('opus_img', 'small_title', 'describe');
+        $inputs['barber_id'] = $id;
+        $validator = Validator::make($inputs, [
+                'opus_img' => 'required|string',
+                'small_title' => 'required|string',
+                'describe' => 'required|string',
+                'barber_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($id, LoginService::USER_TYPE_BARBER);
+        
+        $flag = $this->barberSer->addSample($inputs);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '添加作品成功'));
+        } else {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_INTERNAL_SERVER_ERROR, '服务器失联啦'));
+        }
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{id}/list_sample",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取指定理发师的作品集",
+     *      notes="只能是登陆的理发师能够进行操作,上传数据此处不需要加密处理",
+     *      type="BarberSample",
+     *      nickname="add_sample",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="上传作品的理发师id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取数据成功"),
+     *      @SWG\ResponseMessage(code=404, message="查找的数据不存在"),
+     *      @SWG\ResponseMessage(code=500, message="服务器发生异常")
+     *  )
+     * )
+     */
+    public function listSample(Request $request, $id)
+    {
+        $inputs = $request->only('page', 'per_page');
+        $inputs['barber_id'] = $id;
+        $validator = Validator::make($inputs, [
+                'barber_id' => 'required|integer',
+                'page' => 'integer',
+                'per_page' => 'integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        $list = $this->barberSer->listSample($id, $inputs['per_page']);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NOT_FOUND, '查找的数据不存在'));
+        }
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '获取数据成功', $list));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{barber_id}/del/{sample_id}",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="删除理发师指定的作品",
+     *      notes="需要登录才可操作",
+     *      type="void",
+     *      nickname="delete",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="barber_id",
+     *          description="理发师id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\Parameter(
+     *          name="sample_id",
+     *          description="理发师作品id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=204, message="退出登陆成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到该用户登陆信息"),
+     *      @SWG\ResponseMessage(code=500, message="服务器故障")
+     *  )
+     * )
+     */
+    public function destorySample(BarberSampleRepository $barberSample, $barber_id, $sample_id)
+    {
+        $inputs['barber_id'] = $barber_id;
+        $inputs['id'] = $sample_id;
+        $validator = Validator::make($inputs, [
+                'barber_id' => 'required|integer',
+                'id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+        
+        // 检查是否登陆
+        $this->isLogin($barber_id, LoginService::USER_TYPE_BARBER);
+        
+        // 执行删除操作
+        $flag = $barberSample->destroy($sample_id, $barber_id);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NO_CONTENT, '删除成功'));
+        }
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_NOT_FOUND, '删除的数据不存在'));
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{id}/skill_tags",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取理发师技能标签,需要登录才能获取",
+     *      notes="",
+     *      type="void",
+     *      nickname="delete",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="id",
+     *          description="理发师id，用于检查是否登陆",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取成功"),
+     *      @SWG\ResponseMessage(code=404, message="未找到相关信息"),
+     *      @SWG\ResponseMessage(code=500, message="服务器故障")
+     *  )
+     * )
+     */
+    public function skillTags($id)
+    {
+        $tags = [
+                '教育导师',
+                '编发高手',
+                '接发达人',
+                '整体设计',
+                '日韩范',
+                '色彩玩家',
+                '烫发专家',
+                '绅士服务',
+                '好打理',
+                '颜值高',
+                '有品味',
+        ];
+        
+        // 检查是否登陆
+        $this->isLogin($id, LoginService::USER_TYPE_BARBER);
+        
+        exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_OK, '请求成功', $tags));
+    }
+    
+    /**
+     * 
+     * 
+     * @SWG\Api(
+     *  path="/barbers/{barber_id}/add_product",
+     *  @SWG\Operation(
+     *      method="POST",
+     *      summary="添加选择的项目",
+     *      notes="无",
+     *      type="void",
+     *      nickname="add_product",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="barber_id",
+     *          description="理发师id",
+     *          required=true,
+     *          type="integer",
+     *          paramType="path",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\Parameter(
+     *          name="product_ids",
+     *          description="需要添加的项目id：aes(1,2,3, token)",
+     *          required=true,
+     *          type="string",
+     *          paramType="body",
+     *          allowMultiple=false,
+     *          defaultValue=""
+     *      ),
+     *      @SWG\ResponseMessage(code=201, message="添加成功"),
+     *      @SWG\ResponseMessage(code=404, message="not found"),
+     *      @SWG\ResponseMessage(code=405, message="Validation exception")
+     *  )
+     * )
+     */
+    public function storeProduct(Request $request, $barber_id)
+    {
+        // 检查是否登陆
+        $this->isLogin($barber_id, LoginService::USER_TYPE_BARBER);
+        $cacheValue = $this->loginSer->getUserCache($barber_id, LoginService::USER_TYPE_BARBER);
+
+        $product_ids = filter_arr(explode(',', $this->decodeAppData(bodys('json','data'), $cacheValue['token'])));
+        if (empty($product_ids) || !is_array($product_ids)) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误'
+            ));
+        }
+        
+        $barber = $this->barberRe->show(['id'=>$barber_id]);
+        // 检查理发师是否能够添加项目
+        if ($barber->barber_status != 3 && $barber->barber_status != 6) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNAUTHORIZED,
+                    '只有解绑或未添加项目的理发师才能调用该接口'
+            ));
+        }
+        
+        // 获取添加的项目列表
+        $flag = $this->barberSer->addProduct($barber, $product_ids);
+        if ($flag) {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_CREATED, '添加成功'));
+        } else {
+            exit($this->appResp->buildReplyMsg(ResponseInterface::HTTP_UNPROCESSABLE_ENTITY, '添加项目已经存在'));
+        }
+    }
+    
+    /**
+     *
+     *
+     * @SWG\Api(
+     *  path="/barbers/{barber_id}/get_customer",
+     *  @SWG\Operation(
+     *      method="GET",
+     *      summary="获取理发师的客户信息",
+     *      notes="只有在该理发师处消费了的消费者，才算是该理发师的客户,返回的数据会用该理发师的token加密",
+     *      type="void",
+     *      nickname="get_list",
+     *      @SWG\Consumes("multipart/form-data"),
+     *      authorizations={},
+     *      @SWG\Parameter(
+     *          name="timestamp",
+     *          description="发送请求的时间戳",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="nonce",
+     *          description="签名是加入的随机字符串(客户端生成)",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="signature",
+     *          description="生成的签名，请使用初始化接口中的app_key",
+     *          required=true,
+     *          type="string",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="page",
+     *          description="默认获取第一页数据",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="1"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="per_page",
+     *          description="开发阶段，默认2条(建议，如果是wifi情况下，可扩大请求数，若是3g可减小)",
+     *          required=false,
+     *          type="integer",
+     *          paramType="query",
+     *          allowMultiple=false,
+     *          defaultValue="2"
+     *      ),
+     *      @SWG\Parameter(
+     *          name="barber_id",
+     *          description="理发师id",
+     *          required=true,
+     *          type="string",
+     *          paramType="path"
+     *      ),
+     *      @SWG\ResponseMessage(code=200, message="获取客户关系成功"),
+     *      @SWG\ResponseMessage(code=404, message="该门店暂无客户"),
+     *      @SWG\ResponseMessage(code=500, message="服务器异常或网络阻塞，不确定操作是否成功")
+     *  )
+     * )
+     */
+    public function customer(Request $request, $barber_id)
+    {
+        $inputs = $request->only('page', 'per_page');
+        $inputs['barber_id'] = $barber_id;
+        $validator = Validator::make($inputs, [
+                'page' => 'integer',
+                'per_page' => 'integer',
+                'barber_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_UNPROCESSABLE_ENTITY,
+                    '数据验证错误',
+                    $validator->messages()
+            ));
+        }
+    
+        // 检查是否登陆
+        $this->isLogin($barber_id, LoginService::USER_TYPE_BARBER);
+        $cacheValue = $this->loginSer->getUserCache($barber_id, LoginService::USER_TYPE_BARBER);
+    
+        // 获取列表数据
+        $list = $this->barberSer->getCustomerList($barber_id, $inputs['per_page']);
+        if ($list->isEmpty()) {
+            exit($this->appResp->buildReplyMsg(
+                    ResponseInterface::HTTP_NOT_FOUND,
+                    '该门店暂无客户数据'
+            ));
+        }
+    
+        exit($this->appResp->buildReplyMsg(
+                ResponseInterface::HTTP_OK,
+                '获取数据成功',
+                $this->encodeAppData($list->toJson(), $cacheValue['token'])
+        ));
+    }
+}

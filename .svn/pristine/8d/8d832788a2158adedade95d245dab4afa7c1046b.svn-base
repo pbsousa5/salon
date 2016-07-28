@@ -1,0 +1,60 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 订单信息表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateOrderInfosTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('order_infos', function(Blueprint $table){
+            $table->increments('id');
+            $table->string('trade_no', 32);// 订单编号
+            $table->integer('consumer_id')->index();// 消费者id
+            $table->string('postscript', 255)->nullable();// 消费者留言
+            // '0':'过期','1':'正常','2':'取消'，'3':'门店删除','4':'用户删除'
+            $table->enum('order_status', [0, 1, 2, 3, 4])->default(1);
+            $table->enum('pay_status', [0, 1])->default(0);// 支付状态，0:未支付，1:已支付
+            $table->enum('review_status', [0, 1])->default(0);// 评论状态,0：未评论， 1：已评论
+            $table->integer('consumer_coupon_id');// 使用的优惠券id
+            $table->smallInteger('coupon_face_fee');// 使用的优惠券面额
+            $table->smallInteger('bean_amount');// 使用的积分数量
+            $table->integer('bean_fee');// 使用的积分折算后价值
+            $table->integer('pay_fee');// 用户实际应该支付多少,单位为分(优惠后价格)
+            $table->integer('total_sign_fee'); //订单包含的应该向门店支付的总额
+            $table->integer('original_fee');// 原始价格,单位为分
+            $table->integer('advance_time');// 预约的时间，仅仅用于提醒门店
+            $table->string('pay_name', 20);// 支付方式的名称
+            $table->string('pay_code', 12);// 支付方式的编码
+            $table->string('re_trade_no', 64);// 微信或支付宝返回的交易号
+            $table->integer('re_cash_fee');// 微信或支付宝返回的支付的金额
+            $table->char('re_payment_time', 19);// 进行支付的时间
+            $table->string('consumer_name', 10);// 购买者姓名
+            $table->char('consumer_mobile', 11);// 购买者手机号码
+            $table->string('consumer_head', 32);// 购买者头像
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('order_infos');
+    }
+}

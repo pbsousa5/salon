@@ -1,0 +1,55 @@
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+/**
+ * 
+ * 
+ * @desc 评价表
+ * @author helei <helei@bnersoft.com>
+ * @date 2015年7月22日
+ */
+class CreateReviewsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('reviews', function(Blueprint $table){
+            $table->increments('id');
+            $table->integer('service_score');// 服务评分
+            $table->integer('skill_score');// 技术评分
+            $table->integer('env_score');// 环境评分
+            $table->string('comment_txt', 512);// 评论的文字
+            $table->text('comment_imgs')->nullable();// 评论的图片集合
+            $table->integer('consumer_id')->index();// 评论的消费者
+            $table->integer('product_id')->index();// 评论的产品
+            $table->integer('supplier_id')->index();// 门店的id
+            $table->integer('barber_id')->default(0);// 理发师的id,如果为0表示没有理发师
+            $table->string('barber_nickname')->default('');// 理发师的昵称，如果未设置，则为空
+            $table->integer('order_info_id')->index();//订单id
+            $table->integer('order_product_id')->index();// 评论的订单中的产品id
+            $table->string('queue_time', 10);// 排队时间
+            $table->text('review_tags');// 评论的标签
+            //$table->tinyInteger('level_type');// 评论的等级，1：差，2：中， 3：好
+            $table->tinyInteger('is_verify')->defalult(0);// 是否审核,0:未审核，1：审核
+            $table->tinyInteger('is_highgrade')->default(0);// 是否是认真评价，0：不是，1：是
+            $table->smallInteger('zan_num')->default(0);// 支持该条评论的有多少
+            $table->timestamp('created_at');// 评论的时间
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::drop('reviews');
+    }
+}
